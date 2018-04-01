@@ -63,8 +63,12 @@ void doit(int fd)
     int pathSize;
     recv(fd, &pathSize, INT_SIZE, MSG_WAITALL);
     char* fileName = malloc(pathSize);
+    char* parentName = "../clientTempStore/";
+    char* result = malloc(strlen(fileName) + strlen(parentName) +1);
     recv(fd, fileName, pathSize, MSG_WAITALL);
-    int copyFd = open(fileName, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
+    strcpy(result, parentName);
+    strcat(result, fileName);
+    int copyFd = open(result, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
     int fileSize;
     recv(fd, &fileSize, INT_SIZE, MSG_WAITALL);
     char* bufferToRecv = malloc(fileSize);
@@ -72,6 +76,7 @@ void doit(int fd)
 
     write(copyFd, bufferToRecv, fileSize);
     free(fileName);
+    free(result);
     free(bufferToRecv);
     close(copyFd);
   }
