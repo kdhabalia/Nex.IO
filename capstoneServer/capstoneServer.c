@@ -46,15 +46,17 @@ void doit(int fd)
   recv(fd, funcNumber, 4, MSG_WAITALL);
   memcpy(&whichFunction, funcNumber, 4);
   if(whichFunction == SYSTEM_STATE) {
-    int registeredDevices = 3;
+    int registeredDevices = numberOfDevices();
     send(fd, &registeredDevices, INT_SIZE, 0);
+    HardwareDevice H;
     float* infoArray = malloc(4*INT_SIZE);
     //MARIOS INFO ARRAY FUNCTION CALL IS HERE
     for(int i = 0; i < registeredDevices; i++) {
-      infoArray[0] = 98.3;
-      infoArray[1] = 45.5;
-      infoArray[2] = 22.4;
-      infoArray[3] = 24.5;
+      H = grabDevice(i);
+      infoArray[0] = H->capUtilization;
+      infoArray[1] = H->capMemoryUsage;
+      infoArray[2] = H->utilization;
+      infoArray[3] = H->memoryUsage;
       send(fd, infoArray, 4*INT_SIZE, 0);
     }
     free(infoArray);

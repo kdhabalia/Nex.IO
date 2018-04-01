@@ -1,6 +1,6 @@
 #include "csapp.h"
 #include "sbuf.h"
-//#include "loadbalancer.h"
+#include "../LoadBalancer/loadBalancer.h"
 #define NTHREADS 8
 #define SBUFSIZE 100
 #define SYSTEM_STATE 0
