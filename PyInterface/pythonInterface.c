@@ -1,4 +1,5 @@
 #include <Python.h>
+#include <>
 
 static PyObject* enqueuePacket (PyObject *self, PyObject *args) {
 
@@ -9,11 +10,10 @@ static PyObject* enqueuePacket (PyObject *self, PyObject *args) {
   int load;
   int workloadType;
 
-  PyArg_ParseTuple(args, "iissii", &jobID, &exeID, executablePath, dataPath, &load, &workloadType);
+  PyArg_ParseTuple(args, "issii", &jobID, &exeID, executablePath, dataPath, &load, &workloadType);
 
   WP = malloc(sizeof(struct Workload));
   WP->jobID = jobID;
-  WP->exeID = exeID;
   WP->executablePath = malloc(strlen(tempEP));
   memcpy(WP->executablePath, tempEP, strlen(tempEP));
   WP->dataPath = malloc(strlen(tempDP));

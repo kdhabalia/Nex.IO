@@ -17,7 +17,6 @@ typedef struct Workload* WorkloadPacket;
 struct Workload {
 
   int jobID;
-  int exeID;
   char* executablePath;
   char* dataPath;
   int load;
