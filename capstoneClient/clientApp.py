@@ -26,7 +26,7 @@ def clientRun():
   if(dataArray == -1):
     print("ERROR: Wrong path was entered, run the program again")
     return
-  print("Finally give us a job name\n")
+  print("Finally give us a job name")
   jobName = raw_input("Enter job name: ")
   print("\n")
   os.makedirs("./clientJobs/"+jobName)
@@ -45,15 +45,15 @@ def clientRun():
     else:
       executableArray.append(str(files))
 
-  print(textFileArray)
-  print(executableArray)
-
-
   jsonDict = dict()
   jsonDict["executableArray"] = executableArray
   jsonDict["textFileArray"] = textFileArray
   with open("./clientJobs/"+jobName+"/"+"metaData.txt", "w+") as myfile:
     json.dump(jsonDict, myfile)
+
+  tarCommandToRun = "tar -cvf " + "./clientJobs/"+jobName + ".tar " + "./clientJobs/"+jobName
+  os.system(tarCommandToRun)
+  print("Compression complete, file: " + jobName + ".tar created\n")
   os.system("./capstoneClient")
 
 clientRun()
