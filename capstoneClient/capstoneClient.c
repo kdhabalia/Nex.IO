@@ -38,9 +38,9 @@ void sendData() {
   int nitems, num;
   startData:
     printf("Please make sure to understand the requirements of the tar file by reading README.txt\n");
-    printf("Enter the path ./clientJobs/*jobname*.tar:\n");
+    printf("Enter the *jobname*.tar to submit:\n");
     scanf("%s", &path);
-    printf("Make sure the path is correct: %s\n", path);
+    printf("Make sure the jobs name is correct: %s\n", path);
     printf("If it is correct type 1 and if incorrect type 2:\n");
     restartInput:
       nitems = scanf("%d", &num);
@@ -118,7 +118,13 @@ void marshallAndSendData(int option, char* path) {
     printf("*****************************************\n\n");
     free(infoStruct);
   } else {
-    int fd = open(path, O_RDONLY);
+    char* prefix = "./clientJobs/";
+    char* suffix = ".tar";
+    char* totalResult = malloc(strlen(prefix) + strlen(path) + strlen(suffix)+1);
+    strcpy(totalResult, prefix);
+    strcat(totalResult, path);
+    strcat(totalResult, suffix);
+    int fd = open(totalResult, O_RDONLY);
     int sizeOfPath = strlen(path);
     int sizeOfFile = getFileSize(fd);
     char* fileBuf = malloc(sizeOfFile);
@@ -130,7 +136,6 @@ void marshallAndSendData(int option, char* path) {
     send(sockfd, fileBuf, sizeOfFile, 0); //Send actually file
   }
 }
-
 
 int getFileSize(int fd) {
   struct stat S;

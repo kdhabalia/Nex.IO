@@ -66,15 +66,19 @@ void doit(int fd)
     char* parentName = "../clientTempStore/";
     char* result = malloc(strlen(fileName) + strlen(parentName) +1);
     recv(fd, fileName, pathSize, MSG_WAITALL);
+    printf("Right before the strcopy\n");
     strcpy(result, parentName);
+    printf("Right before the strcat\n");
     strcat(result, fileName);
+    printf("Tthe file to make is: %s\n", result);
     int copyFd = open(result, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
     int fileSize;
     recv(fd, &fileSize, INT_SIZE, MSG_WAITALL);
     char* bufferToRecv = malloc(fileSize);
     recv(fd, bufferToRecv, fileSize, MSG_WAITALL);
-
     write(copyFd, bufferToRecv, fileSize);
+
+    printf("Right before freeing\n");
     free(fileName);
     free(result);
     free(bufferToRecv);

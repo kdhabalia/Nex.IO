@@ -29,7 +29,11 @@ def clientRun():
   print("Finally give us a job name")
   jobName = raw_input("Enter job name: ")
   print("\n")
-  os.makedirs("./clientJobs/"+jobName)
+  try:
+    os.makedirs("./clientJobs/"+jobName)
+  except:
+    print("ERROR: Job already exists")
+    return
 
   for exeFile in exeArray:
     shutil.copy(exeFile, "./clientJobs/"+jobName+"/")

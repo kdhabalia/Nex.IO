@@ -50,6 +50,8 @@ def parseTextFile(path):
 
 
 def untarFile(path):
+  untarCmd = "tar -C" + "../clientTempStore -xvf " + path
+  os.system(
 	tar = tarfile.open(path)
 	tar.extractall()
 	tar.close()
