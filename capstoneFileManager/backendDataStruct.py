@@ -1,9 +1,8 @@
 import os
 from threading import Thread
-from multiprocessing import Process, Manager
-from pythonInterface import *
 
 databaseDictionary = {}
+packetCounter = 0
 
 def populateDictionary():
   global databaseDictionary
@@ -13,13 +12,9 @@ def populateDictionary():
       if folders not in databaseDictionary:
         databaseDictionary[folders] = {}
         for execs in os.listdir(directory +"/" + folders):
-          print(execs)
           for txtFiles in os.listdir(directory + "/" + folders + "/" + execs):
-            print(txtFiles)
             if(txtFiles.lower().endswith(".txt")):
-              print("HELLLHERE HOW ARE TOU")
-              (databaseDictionary[folders])[txtFiles] = (execs, 0)
-              print(databaseDictionary[folders])
+              (databaseDictionary[folders])[txtFiles] = [execs, 0]
 
 
 def putTasksInQueue(granularity):
@@ -42,21 +37,25 @@ def putTasksInQueue(granularity):
 
 
 def setToRun(startVal, tillVal, databaseDictionary):
-  i = startVal
-  while(i < tillVal):
-    jobDict = databaseDictionary[str(i)]
-    for keys, vals in jobDict.iteritems():
-      if(vals[1] == 0):
-        vals[1] = 1
+  global packetCounter
+  j = startVal
+  while(j < tillVal):
+    jobDict = databaseDictionary[str(j)]
+    for i in jobDict.keys():
+      if((jobDict[i][1]) == 0):
+        jobDict[i][1] = 1
         tempPath = "../clientFileDatabase/"+str(i)+"/"
-        enqueWorkloadPacket(i, tempPath+str(vals[0]),tempPath+str(vals[0])+"/"+keys, 1,0)
-    i+=1
+        with open("../enqueCache/packet"+str(packetCounter)+".txt", "w+") as myfile:
+          packetCounter += 1
+          execVal = str(jobDict[i][0])
+          myfile.write(str(i)+"\n"+tempPath+execVal+"\n"+tempPath+execVal+"/"+i+"\n"+str(1)+"\n"+str(0))
+    j+=1
 
 
 
 def main():
   p1 = Thread(target=populateDictionary, args=())
-  p2 = Thread(target=putTasksInQueue, args=())
+  p2 = Thread(target=putTasksInQueue, args=(4,))
   p1.start()
   p2.start()
   p1.join()

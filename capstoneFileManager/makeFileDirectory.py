@@ -31,14 +31,14 @@ def makeDatabaseEntry(nameOfFile):
   firstFileToMake = str(exeArray[0])
 
   for i in xrange(len(exeArray)):
-    os.mkdir(pathToMake + "/" + str(exeArray[i]))
+    os.mkdir(pathToMake + "/" + str(i))
 
   for textFile in os.listdir("../clientTempStore/"+nameOfFile):
     if textFile in textArray:
-      shutil.move("../clientTempStore/"+nameOfFile+"/"+textFile, pathToMake+"/"+str(exeArray[0])+"/")
+      shutil.move("../clientTempStore/"+nameOfFile+"/"+textFile, pathToMake+"/"+"0/")
 
   for i in xrange(len(exeArray)):
-    shutil.move("../clientTempStore/"+nameOfFile+"/"+str(exeArray[i]), pathToMake+"/"+str(exeArray[i])+"/")
+    shutil.move("../clientTempStore/"+nameOfFile+"/"+str(exeArray[i]), pathToMake+"/"+str(i)+"/")
   os.remove("../clientTempStore/"+nameOfFile+".tar")
   shutil.rmtree("../clientTempStore/"+nameOfFile)
   jobID += 1
