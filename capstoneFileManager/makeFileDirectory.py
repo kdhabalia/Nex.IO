@@ -8,7 +8,7 @@ jobID = 0
 
 def makeFileDirectory():
 	directoryToCheck = "../clientTempStore/"
-	setOfFiles = {[]}
+	setOfFiles = set()
 	originalLength = 0
 	while(1):
 		for tarFile in os.listdir(directoryToCheck):
@@ -23,22 +23,25 @@ def makeFileDirectory():
 
 
 def makeDatabaseEntry(nameOfFile):
-	databaseDirectory = "../clientFileDatabase/"
-	pathToMake = "../clientFileDatabase/" + str(jobID)
-	os.mkdir(pathToMake)
-	(exeArray, textArray) = parseTextFile("../clientTempStore/"+nameOfFile+"/"+"metaData.txt")
-	firstFileToMake = str(exeArray[0])
+  global jobID
+  databaseDirectory = "../clientFileDatabase/"
+  pathToMake = "../clientFileDatabase/" + str(jobID)
+  os.mkdir(pathToMake)
+  (exeArray, textArray) = parseTextFile("../clientTempStore/"+nameOfFile+"/"+"metaData.txt")
+  firstFileToMake = str(exeArray[0])
 
-	for i in xrange(len(exeArray)):
-		os.mkdir(pathToMake + "/" + str(exeArray[i]))
+  for i in xrange(len(exeArray)):
+    os.mkdir(pathToMake + "/" + str(exeArray[i]))
 
-	for textFile in os.listdir("../clientTempStore/"+nameOfFile):
-		if textFile in textArray:
-			shutil.move("../clientTempStore/"+nameOfFile+"/"+textFile, pathToMake+"/"+str(exeArray[0])+"/")
+  for textFile in os.listdir("../clientTempStore/"+nameOfFile):
+    if textFile in textArray:
+      shutil.move("../clientTempStore/"+nameOfFile+"/"+textFile, pathToMake+"/"+str(exeArray[0])+"/")
 
-	for i in xrange(len(exeArray)):
-		shutil.move("../clientTempStore/"+nameOfFile+"/"+str(exeArray[i]), pathToMake+"/"+str(exeArray[i])+"/")
-	jobID += 1
+  for i in xrange(len(exeArray)):
+    shutil.move("../clientTempStore/"+nameOfFile+"/"+str(exeArray[i]), pathToMake+"/"+str(exeArray[i])+"/")
+  os.remove("../clientTempStore/"+nameOfFile+".tar")
+  shutil.rmtree("../clientTempStore/"+nameOfFile)
+  jobID += 1
 
 
 def parseTextFile(path):
@@ -51,7 +54,6 @@ def parseTextFile(path):
 
 def untarFile(path):
   untarCmd = "tar -C" + "../clientTempStore -xvf " + path
-  os.system(
-	tar = tarfile.open(path)
-	tar.extractall()
-	tar.close()
+  os.system(untarCmd)
+
+makeFileDirectory()

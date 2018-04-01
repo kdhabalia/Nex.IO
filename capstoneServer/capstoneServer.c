@@ -45,7 +45,6 @@ void doit(int fd)
   int whichFunction;
   recv(fd, funcNumber, 4, MSG_WAITALL);
   memcpy(&whichFunction, funcNumber, 4);
-  printf("The function is: %d\n", whichFunction);
   if(whichFunction == SYSTEM_STATE) {
     int registeredDevices = 3;
     send(fd, &registeredDevices, INT_SIZE, 0);
@@ -62,15 +61,13 @@ void doit(int fd)
   } else if(whichFunction == SEND_FILE) {
     int pathSize;
     recv(fd, &pathSize, INT_SIZE, MSG_WAITALL);
-    char* fileName = malloc(pathSize);
+    char* fileName = malloc(pathSize+1);
     char* parentName = "../clientTempStore/";
-    char* result = malloc(strlen(fileName) + strlen(parentName) +1);
+    char* result = malloc(pathSize + strlen(parentName) +1);
     recv(fd, fileName, pathSize, MSG_WAITALL);
-    printf("Right before the strcopy\n");
+    fileName[pathSize] = '\0';
     strcpy(result, parentName);
-    printf("Right before the strcat\n");
     strcat(result, fileName);
-    printf("Tthe file to make is: %s\n", result);
     int copyFd = open(result, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
     int fileSize;
     recv(fd, &fileSize, INT_SIZE, MSG_WAITALL);
@@ -78,7 +75,6 @@ void doit(int fd)
     recv(fd, bufferToRecv, fileSize, MSG_WAITALL);
     write(copyFd, bufferToRecv, fileSize);
 
-    printf("Right before freeing\n");
     free(fileName);
     free(result);
     free(bufferToRecv);

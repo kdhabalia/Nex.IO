@@ -55,7 +55,7 @@ def clientRun():
   with open("./clientJobs/"+jobName+"/"+"metaData.txt", "w+") as myfile:
     json.dump(jsonDict, myfile)
 
-  tarCommandToRun = "tar -cvf " + "./clientJobs/"+jobName + ".tar " + "./clientJobs/"+jobName
+  tarCommandToRun = "cd ./clientJobs && tar -cvf " + jobName + ".tar " +jobName
   os.system(tarCommandToRun)
   print("Compression complete, file: " + jobName + ".tar created\n")
   os.system("./capstoneClient")

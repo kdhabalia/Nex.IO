@@ -119,11 +119,9 @@ void marshallAndSendData(int option, char* path) {
     free(infoStruct);
   } else {
     char* prefix = "./clientJobs/";
-    char* suffix = ".tar";
-    char* totalResult = malloc(strlen(prefix) + strlen(path) + strlen(suffix)+1);
+    char* totalResult = malloc(strlen(prefix) + strlen(path));
     strcpy(totalResult, prefix);
     strcat(totalResult, path);
-    strcat(totalResult, suffix);
     int fd = open(totalResult, O_RDONLY);
     int sizeOfPath = strlen(path);
     int sizeOfFile = getFileSize(fd);
