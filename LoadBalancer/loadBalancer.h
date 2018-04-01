@@ -11,7 +11,7 @@
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
-#include "queue.h"
+#include "../Queue/queue.h"
 
 typedef struct Workload* WorkloadPacket;
 struct Workload {
@@ -47,6 +47,9 @@ void registerDevice (char* deviceIP, float capUtilization, float capMemoryUsage,
 
 void balanceLoads (void* threadArgs);
 
+int numberOfDevices ();
+
+HardwareDevice grabDevice (int index);
 
 
 

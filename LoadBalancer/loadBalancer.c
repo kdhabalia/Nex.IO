@@ -5,6 +5,26 @@ pthread_mutex_t mLock = PTHREAD_MUTEX_INITIALIZER;
 
 HardwareDevice* devices;
 
+int numberOfDevices () {
+
+  pthread_mutex_lock(&mLock);
+  int numDevices = registeredDevices;
+  pthread_mutex_unlock(&mLock);
+
+  return numDevices;
+
+}
+
+HardwareDevice grabDevice (int index) {
+
+  pthread_mutex_lock(&mLock);
+  HardwareDevice H = devices[index];
+  pthread_mutex_unlock(&mLock);
+
+  return H;
+
+}
+
 int eval (void* e) {
 
   WorkloadPacket element = (WorkloadPacket)e;
@@ -15,16 +35,12 @@ int eval (void* e) {
 
 void registerDevice (char* deviceIP, float capUtilization, float capMemoryUsage, float utilization, float memoryUsage) {
 
-  pthread_mutex_lock(&mLock);
-  int numDevices = registeredDevices;
-  pthread_mutex_unlock(&mLock);
+  int numDevices = numberOfDevices();
 
   HardwareDevice* newDevices = malloc((numDevices+1)*sizeof(HardwareDevice));
-  pthread_mutex_lock(&mLock);
   for (int i = 0; i < numDevices; i++) {
-    newDevices[i] = devices[i];
+    newDevices[i] = grabDevice(i);
   }
-  pthread_mutex_unlock(&mLock);
 
   HardwareDevice new = malloc(sizeof(struct Device));
   pthread_rwlock_init(&(new->lock), NULL);
@@ -46,37 +62,28 @@ void registerDevice (char* deviceIP, float capUtilization, float capMemoryUsage,
 
 int* hardwareDevicesQueueLoads () {
 
-  pthread_mutex_lock(&mLock);
-  int numDevices = registeredDevices;
-  pthread_mutex_unlock(&mLock);
+  int numDevices = numberOfDevices();
 
   int* loads = malloc(numDevices*sizeof(int));
   for (int i = 0; i < numDevices; i++) {
-    pthread_mutex_lock(&mLock);
-    HardwareDevice H = devices[i];
-    pthread_mutex_unlock(&mLock);
+    HardwareDevice H = grabDevice(i);
     Queue Q = H->Q;
     int load = queueLoad(Q, eval);
     loads[i] = load;
   }
 
-  printf("Returning\n");
   return loads;
 
 }
 
 float* hardwareDevicesUtilizations () {
 
-  pthread_mutex_lock(&mLock);
-  int numDevices = registeredDevices;
-  pthread_mutex_unlock(&mLock);
+  int numDevices = numberOfDevices();
 
   float* utilizations = malloc(numDevices*sizeof(float));
 
   for (int i = 0; i < numDevices; i++) {
-    pthread_mutex_lock(&mLock);
-    HardwareDevice H = devices[i];
-    pthread_mutex_unlock(&mLock);
+    HardwareDevice H = grabDevice(i);
     pthread_rwlock_rdlock(&(H->lock));
     utilizations[i] = H->utilization;
     pthread_rwlock_unlock(&(H->lock));
@@ -88,16 +95,12 @@ float* hardwareDevicesUtilizations () {
 
 float* hardwareDevicesMemoryUsages () {
 
-  pthread_mutex_lock(&mLock);
-  int numDevices = registeredDevices;
-  pthread_mutex_unlock(&mLock);
+  int numDevices = numberOfDevices();
 
   float* memoryUsages = malloc(numDevices*sizeof(float));
 
   for (int i = 0; i < numDevices; i++) {
-    pthread_mutex_lock(&mLock);
-    HardwareDevice H = devices[i];
-    pthread_mutex_unlock(&mLock);
+    HardwareDevice H = grabDevice(i);
     pthread_rwlock_rdlock(&(H->lock));
     memoryUsages[i] = H->memoryUsage;
     pthread_rwlock_unlock(&(H->lock));
@@ -109,9 +112,7 @@ float* hardwareDevicesMemoryUsages () {
 
 float* hardwareDevicesScores (int* queueLoads, float* hardwareUtilizations, float* hardwareMemoryUsages) {
 
-  pthread_mutex_lock(&mLock);
-  int numDevices = registeredDevices;
-  pthread_mutex_unlock(&mLock);
+  int numDevices = numberOfDevices();
 
   float* scores = malloc(numDevices*sizeof(float));
 
@@ -129,9 +130,7 @@ float* hardwareDevicesScores (int* queueLoads, float* hardwareUtilizations, floa
 
 int minimumUsedDevice (float* hardwareScores) {
 
-  pthread_mutex_lock(&mLock);
-  int numDevices = registeredDevices;
-  pthread_mutex_unlock(&mLock);
+  int numDevices = numberOfDevices();
 
   int minimumIndex = 0;
   float minimumScore = 0.0;
@@ -267,8 +266,7 @@ void sendToHardwareDevice (HardwareDevice H) {
     WorkloadPacket e = (WorkloadPacket)emptyHardwareQueue(H);
 
     char* executablePath = e->executablePath;
-    char** dataPaths = e->dataPaths;
-    int dataQuantity = e->dataQuantity;
+    char* dataPath = e->dataPath;
 
     fd = open(executablePath, O_RDONLY);
 
@@ -288,28 +286,23 @@ void sendToHardwareDevice (HardwareDevice H) {
     free(buf);
     free(sendBuffer);
 
-    for (int i = 0; i < dataQuantity; i++) {
-      char* dataPath = dataPaths[i];
-      fd = open(dataPath, O_RDONLY);
+    fd = open(dataPath, O_RDONLY);
 
-      size = sizeOfFile(fd);
-      buf = malloc(size);
+    size = sizeOfFile(fd);
+    buf = malloc(size);
 
-      read(fd, buf, size);
+    read(fd, buf, size);
 
-      sendBuffer = malloc(sizeof(int)+size);
-      memcpy(sendBuffer, &size, sizeof(int));
-      memcpy(sendBuffer+sizeof(int), buf, size);
+    sendBuffer = malloc(sizeof(int)+size);
+    memcpy(sendBuffer, &size, sizeof(int));
+    memcpy(sendBuffer+sizeof(int), buf, size);
 
-      send(sessfd, sendBuffer, (sizeof(int)+size), 0);
+    send(sessfd, sendBuffer, (sizeof(int)+size), 0);
 
-      close(fd);
-      free(buf);
-      free(sendBuffer);
-      free(dataPath);
-    }
-
-    free(dataPaths);
+    close(fd);
+    free(buf);
+    free(sendBuffer);
+    free(dataPath);
     free(executablePath);
     free(e);
 
