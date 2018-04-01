@@ -1,5 +1,7 @@
 #include "loadBalancer.h"
 
+Queue inQ;
+
 int registeredDevices = 0;
 pthread_mutex_t mLock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -152,14 +154,13 @@ int minimumUsedDevice (float* hardwareScores) {
 void balanceLoads (void* threadArgs) {
 
   printf("In load balancer\n");
-  Queue inQ = (Queue)threadArgs;
   printf("Number of available devices is %d\n", registeredDevices);
   printf("Number of items in inQ is %d\n", queueLength(inQ));
   printf("\n");
 
   while (1) {
 
-    if (queueLength(inQ) != 0) {
+    if (queueLength(inQ) != 0 && numberOfDevices() != 0) {
       void* e = queueDequeue(inQ);
       printf("Removed job ID is %d\n", ((WorkloadPacket)e)->jobID);
 
@@ -302,6 +303,7 @@ void sendToHardwareDevice (HardwareDevice H) {
     close(fd);
     free(buf);
     free(sendBuffer);
+
     free(dataPath);
     free(executablePath);
     free(e);
@@ -372,6 +374,7 @@ void receiveFromHardwareDevice (HardwareDevice H) {
         H->utilization = utilization;
         H->memoryUsage = memoryUsage;
         pthread_rwlock_unlock(&(H->lock));
+        break;
     }
 
   }

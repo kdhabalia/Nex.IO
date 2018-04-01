@@ -39,6 +39,8 @@ struct Device {
 
 };
 
+extern Queue inQ;
+
 extern int registeredDevices;
 
 extern HardwareDevice* devices;

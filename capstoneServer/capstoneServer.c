@@ -15,6 +15,11 @@ int main(int argc, char **argv)
 
     listenfd = Open_listenfd(port);
 
+    // Launches threads for separate components
+    pthread_t LBworker;
+    queueInit(inQ);
+    pthread_create(&LBworker, NULL, balanceLoads, (void*)NULL);
+
     sbuf_init(&sbuf, SBUFSIZE);
     for(i = 0; i < NTHREADS; i++) {
       Pthread_create(&tid, NULL, thread, NULL);
