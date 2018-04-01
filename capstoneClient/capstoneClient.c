@@ -8,7 +8,8 @@ int main() {
 void acceptUserInput() {
   char name[100];
   int num, nitems;
-  printf("Welcome to NEX.IO. We are working very hard to save idle computing resources!\n");
+  printf("Great! Now you are done with the basic steps. Welcome to system!\n");
+  printf("We hope to run all your tasks in a reasonable amount of time.\n");
   printf("Here you can submit tasks and we will run them on voluntary computing resources avaiable to us.\n");
   printf("What is your name?\n");
   fgets(name, 100, stdin);
@@ -37,7 +38,7 @@ void sendData() {
   int nitems, num;
   startData:
     printf("Please make sure to understand the requirements of the tar file by reading README.txt\n");
-    printf("Enter the relative path of the tar file you are trying to send:\n");
+    printf("Enter the path ./clientJobs/*jobname*.tar:\n");
     scanf("%s", &path);
     printf("Make sure the path is correct: %s\n", path);
     printf("If it is correct type 1 and if incorrect type 2:\n");
