@@ -17,7 +17,7 @@ int main(int argc, char **argv)
 
     // Launches threads for separate components
     pthread_t LBworker;
-    queueInit(inQ);
+    inQ = queueInit();
     pthread_create(&LBworker, NULL, balanceLoads, (void*)NULL);
 
     sbuf_init(&sbuf, SBUFSIZE);

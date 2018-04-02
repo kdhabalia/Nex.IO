@@ -1,0 +1,5 @@
+0
+../potato
+../tomato
+1
+0
