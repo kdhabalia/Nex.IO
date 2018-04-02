@@ -180,9 +180,6 @@ void balanceLoads (void* threadArgs) {
       queueEnqueue(outQ, e);
       printf("\n");
     }
-    else {
-      break;
-    }
 
   }
 

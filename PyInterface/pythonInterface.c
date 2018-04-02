@@ -1,7 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "../LoadBalancer/loadBalancer.h"
+#include "pythonInterface.h"
 
 char* filename = "packet";
 char* suffix = ".txt";
@@ -61,9 +58,7 @@ char* itoa(int num, char* str, int base)
   return str;
 }
 
-void main () {
-
-  inQ = queueInit();
+void enqueueNewPacket () {
 
   int currentPacket = 0;
   int l;
@@ -80,7 +75,6 @@ void main () {
 
     free(num);
 
-    printf("%s\n", fullname);
     struct stat S;
     while (stat(fullname, &S) == -1);
 
@@ -139,18 +133,10 @@ void main () {
     free(tempEP);
     free(tempDP);
 
-    printf("jobID=%d\n", jobID);
-    printf("%s\n", WP->executablePath);
-    printf("%s\n", WP->dataPath);
-    printf("load=%d\n", load);
-    printf("type=%d\n", workloadType);
-
     queueEnqueue(inQ, (void*)WP);
 
     currentPacket++;
 
-    printf("Done with this packet\n");
-    printf("\n");
   }
 
 }

@@ -1,6 +1,6 @@
 #include "csapp.h"
 #include "sbuf.h"
-#include "../LoadBalancer/loadBalancer.h"
+#include "../PyInterface/pythonInterface.h"
 #define NTHREADS 8
 #define SBUFSIZE 100
 #define SYSTEM_STATE 0
