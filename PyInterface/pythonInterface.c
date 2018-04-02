@@ -1,6 +1,6 @@
 #include "pythonInterface.h"
 
-char* filename = "packet";
+char* filename = "../enqueCache/packet";
 char* suffix = ".txt";
 
 // inline function to swap two numbers
@@ -58,6 +58,29 @@ char* itoa(int num, char* str, int base)
   return str;
 }
 
+int numLines (char* filename) {
+
+  struct stat S;
+  if (stat(filename, &S) == -1) {
+    return 0;
+  }
+
+  FILE *fp;
+  char c;
+
+  fp = fopen(filename, "r");
+
+  int count = 0;
+  // Extract characters from file and store in character c
+  for (c = getc(fp); c != EOF; c = getc(fp)) {
+    if (c == '\n') {// Increment count if this character is newline
+      count = count + 1;
+    }
+  }
+
+  return count;
+}
+
 void enqueueNewPacket () {
 
   int currentPacket = 0;
@@ -76,7 +99,7 @@ void enqueueNewPacket () {
     free(num);
 
     struct stat S;
-    while (stat(fullname, &S) == -1);
+    while ((stat(fullname, &S) == -1) || (numLines(fullname) != 4));
 
     int jobID;
     const char* tempEP = malloc(50);

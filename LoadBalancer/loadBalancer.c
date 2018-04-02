@@ -163,6 +163,11 @@ void balanceLoads (void* threadArgs) {
     if (queueLength(inQ) != 0 && numberOfDevices() != 0) {
       void* e = queueDequeue(inQ);
       printf("Removed job ID is %d\n", ((WorkloadPacket)e)->jobID);
+      printf("Packet load is %d\n", ((WorkloadPacket)e)->load);
+      printf("Packet exe path is %s\n", ((WorkloadPacket)e)->executablePath);
+      printf("Packet data path is %s\n", ((WorkloadPacket)e)->dataPath);
+      printf("Packet type is %d\n", ((WorkloadPacket)e)->workloadType);
+
 
       int* queueLoads = hardwareDevicesQueueLoads();
       printf("Queue loads for the devices is %d, %d, %d\n", queueLoads[0], queueLoads[1], queueLoads[2]);

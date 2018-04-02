@@ -48,7 +48,7 @@ def setToRun(startVal, tillVal, databaseDictionary):
         with open("../enqueCache/packet"+str(packetCounter)+".txt", "w+") as myfile:
           packetCounter += 1
           execVal = str(jobDict[i][0])
-          myfile.write(str(i)+"\n"+tempPath+execVal+"\n"+tempPath+execVal+"/"+i+"\n"+str(1)+"\n"+str(0))
+          myfile.write(str(j)+"\n"+tempPath+execVal+"\n"+tempPath+execVal+"/"+i+"\n"+str(1)+"\n"+str(0))
     j+=1
 
 

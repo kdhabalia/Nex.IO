@@ -1,5 +1,0 @@
-1
-hello
-goodbye
-50
-2
