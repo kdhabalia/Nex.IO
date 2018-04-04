@@ -154,7 +154,7 @@ int init(void) {
 
  	// Get environment variable indicating the ip address of the server
 	serverip = "128.2.13.145";
-  serverport = "15742";
+  serverport = "15744";
 
 	port = (unsigned short)atoi(serverport);
 
