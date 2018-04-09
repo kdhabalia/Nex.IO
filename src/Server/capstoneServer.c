@@ -15,36 +15,16 @@ int main(int argc, char **argv)
 
     listenfd = Open_listenfd(port);
 
-    // This code is only for testing
-    char* D1IP = "1";
-    float D1capU = 0.823;
-    float D1capMU = 0.916;
-    float D1U = 0.20987;
-    float D1MU = 0.1023;
-
-    char* D2IP = "2";
-    float D2capU = 0.323;
-    float D2capMU = 0.216;
-    float D2U = 0.10987;
-    float D2MU = 0.1023;
-
-    char* D3IP = "3";
-    float D3capU = 0.423;
-    float D3capMU = 0.816;
-    float D3U = 0.20987;
-    float D3MU = 0.1023;
-
-    printf("Registering Device 1\n");
-    registerDevice(D1IP, D1capU, D1capMU, D1U, D1MU);
-
-    printf("Registering Device 2\n");
-    registerDevice(D2IP, D2capU, D2capMU, D2U, D2MU);
-
-    printf("Registering Device 3\n");
-    registerDevice(D3IP, D3capU, D3capMU, D3U, D3MU);
-
     // Launches threads for separate components
+    srand(time(NULL));
+
     inQ = queueInit();
+
+    pthread_t D0worker;
+    pthread_create(&D0worker, NULL, Device, (void*)"0");
+
+    pthread_t D1worker;
+    pthread_create(&D1worker, NULL, Device, (void*)"1");
 
     pthread_t EPworker;
     pthread_create(&EPworker, NULL, enqueueNewPacket, (void*)NULL);
@@ -64,6 +44,59 @@ int main(int argc, char **argv)
     }
 }
 
+float randomFloat()
+{
+  float r = (float)rand()/(float)RAND_MAX;
+  return r;
+}
+
+void Device (void* threadArgs) {
+
+  char* IP = (char*)threadArgs;
+
+  float DcapU = randomFloat();
+  DcapU = (DcapU < 0.5) ? 0.5 : DcapU;
+  float DcapMU = randomFloat();
+  DcapMU = (DcapMU < 0.6) ? 0.6 : DcapMU;
+  float DU = randomFloat();
+  DU = (DU > 0.4) ? 0.43 : DU;
+  float DMU = randomFloat();
+  DMU = (DMU > 0.4) ? 0.43 : DMU;
+
+  HardwareDevice H = registerDevice(IP, DcapU, DcapMU, DU, DMU);
+  printf("Device %s registered\n", IP);
+
+  int currentPacketCount = 0;
+  time_t seconds = time(NULL);
+  while (1) {
+
+    int l = queueLength(H->Q);
+    if (l > currentPacketCount) {
+      DU += 0.15;
+      DU = (DU > 1.0) ? 1.0 : DU;
+      DMU += 0.12;
+      DMU = (DMU > 1.0) ? 1.0 : DMU;
+      updateDeviceStats(H, DcapU, DcapMU, DU, DMU);
+
+      currentPacketCount++;
+    }
+
+    if (l > 0 && time(NULL) - seconds > 10) {
+      seconds = time(NULL);
+      void* e = queueDequeue(H->Q);
+      DU -= 0.15;
+      DMU -= 0.12;
+      updateDeviceStats(H, DcapU, DcapMU, DU, DMU);
+      currentPacketCount--;
+    }
+
+    if (l == 0) {
+      seconds = time(NULL);
+    }
+
+  }
+
+}
 
 void* thread(void* vargp)
 {
@@ -85,23 +118,18 @@ void doit(int fd)
   if(whichFunction == SYSTEM_STATE) {
     int registeredDevices = numberOfDevices();
     send(fd, &registeredDevices, INT_SIZE, 0);
-    HardwareDevice H;
-    float* infoArray = malloc(4*INT_SIZE);
+    float* infoArray;
     //MARIOS INFO ARRAY FUNCTION CALL IS HERE
     for(int i = 0; i < registeredDevices; i++) {
-      H = grabDevice(i);
-      infoArray[0] = H->capUtilization;
-      infoArray[1] = H->capMemoryUsage;
-      infoArray[2] = H->utilization;
-      infoArray[3] = H->memoryUsage;
+      infoArray = deviceStats(i);
       send(fd, infoArray, 4*INT_SIZE, 0);
+      free(infoArray);
     }
-    free(infoArray);
   } else if(whichFunction == SEND_FILE) {
     int pathSize;
     recv(fd, &pathSize, INT_SIZE, MSG_WAITALL);
     char* fileName = malloc(pathSize+1);
-    char* parentName = "../clientTempStore/";
+    char* parentName = "../Storage/";
     char* result = malloc(pathSize + strlen(parentName) +1);
     recv(fd, fileName, pathSize, MSG_WAITALL);
     fileName[pathSize] = '\0';

@@ -12,11 +12,10 @@ def populateDictionary():
     for folders in os.listdir(baseDirectory):
       if folders not in databaseDictionary:
         databaseDictionary[folders] = {}
-        for execs in os.listdir(baseDirectory +"/" + folders):
-          for txtFiles in os.listdir(baseDirectory + "/" + folders + "/" + execs):
+        for execs in os.listdir(baseDirectory + folders):
+          for txtFiles in os.listdir(baseDirectory + folders + "/" + execs):
             if(txtFiles.lower().endswith(".txt")):
               (databaseDictionary[folders])[txtFiles] = [execs, 0]
-
 
 def putTasksInQueue(granularity):
   global databaseDictionary

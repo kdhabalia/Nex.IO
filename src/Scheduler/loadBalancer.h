@@ -44,13 +44,17 @@ extern int registeredDevices;
 
 extern HardwareDevice* devices;
 
-void registerDevice (char* deviceIP, float capUtilization, float capMemoryUsage, float utilization, float memoryUsage);
+HardwareDevice registerDevice (char* deviceIP, float capUtilization, float capMemoryUsage, float utilization, float memoryUsage);
+
+void updateDeviceStats (HardwareDevice H, float capUtilization, float capMemoryUsage, float utilization, float memoryUsage);
 
 void balanceLoads (void* threadArgs);
 
 int numberOfDevices ();
 
 HardwareDevice grabDevice (int index);
+
+float* deviceStats (int index);
 
 
 

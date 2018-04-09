@@ -27,6 +27,23 @@ HardwareDevice grabDevice (int index) {
 
 }
 
+float* deviceStats (int index) {
+
+  HardwareDevice H = grabDevice(index);
+
+  float* returnArray = malloc(4*sizeof(float));
+
+  pthread_rwlock_rdlock(&(H->lock));
+  returnArray[0] = H->capUtilization;
+  returnArray[1] = H->capMemoryUsage;
+  returnArray[2] = H->utilization;
+  returnArray[3] = H->memoryUsage;
+  pthread_rwlock_unlock(&(H->lock));
+
+  return returnArray;
+
+}
+
 int eval (void* e) {
 
   WorkloadPacket element = (WorkloadPacket)e;
@@ -35,13 +52,13 @@ int eval (void* e) {
 
 }
 
-void registerDevice (char* deviceIP, float capUtilization, float capMemoryUsage, float utilization, float memoryUsage) {
+HardwareDevice registerDevice (char* deviceIP, float capUtilization, float capMemoryUsage, float utilization, float memoryUsage) {
 
-  int numDevices = numberOfDevices();
+  pthread_mutex_lock(&mLock);
 
-  HardwareDevice* newDevices = malloc((numDevices+1)*sizeof(HardwareDevice));
-  for (int i = 0; i < numDevices; i++) {
-    newDevices[i] = grabDevice(i);
+  HardwareDevice* newDevices = malloc((registeredDevices+1)*sizeof(HardwareDevice));
+  for (int i = 0; i < registeredDevices; i++) {
+    newDevices[i] = devices[i];
   }
 
   HardwareDevice new = malloc(sizeof(struct Device));
@@ -53,12 +70,25 @@ void registerDevice (char* deviceIP, float capUtilization, float capMemoryUsage,
   new->capUtilization = capUtilization;
   new->deviceIP = deviceIP;
 
-  pthread_mutex_lock(&mLock);
   registeredDevices++;
   newDevices[registeredDevices-1] = new;
   free(devices);
   devices = newDevices;
+
   pthread_mutex_unlock(&mLock);
+
+  return new;
+
+}
+
+void updateDeviceStats (HardwareDevice H, float capUtilization, float capMemoryUsage, float utilization, float memoryUsage) {
+
+  pthread_rwlock_wrlock(&(H->lock));
+  H->capUtilization = capUtilization;
+  H->capMemoryUsage = capMemoryUsage;
+  H->utilization = utilization;
+  H->memoryUsage = memoryUsage;
+  pthread_rwlock_unlock(&(H->lock));
 
 }
 
@@ -161,6 +191,7 @@ void balanceLoads (void* threadArgs) {
   while (1) {
 
     if (queueLength(inQ) != 0 && numberOfDevices() != 0) {
+      printf("Transferring job\n");
       void* e = queueDequeue(inQ);
       printf("Removed job ID is %d\n", ((WorkloadPacket)e)->jobID);
       printf("Packet load is %d\n", ((WorkloadPacket)e)->load);
@@ -170,14 +201,14 @@ void balanceLoads (void* threadArgs) {
 
 
       int* queueLoads = hardwareDevicesQueueLoads();
-      printf("Queue loads for the devices is %d, %d, %d\n", queueLoads[0], queueLoads[1], queueLoads[2]);
+      printf("Queue loads for the devices is %d, %d\n", queueLoads[0], queueLoads[1]);
       float* hardwareUtilizations = hardwareDevicesUtilizations();
-      printf("Hardware Utilizations for the devices is %f, %f, %f\n", hardwareUtilizations[0], hardwareUtilizations[1], hardwareUtilizations[2]);
+      printf("Hardware Utilizations for the devices is %f, %f\n", hardwareUtilizations[0], hardwareUtilizations[1]);
       float* hardwareMemoryUsages = hardwareDevicesMemoryUsages();
-      printf("Hardware Memory Utilizations for the devices is %f, %f, %f\n", hardwareMemoryUsages[0], hardwareMemoryUsages[1], hardwareMemoryUsages[2]);
+      printf("Hardware Memory Utilizations for the devices is %f, %f\n", hardwareMemoryUsages[0], hardwareMemoryUsages[1]);
 
       float* hardwareScores = hardwareDevicesScores(queueLoads, hardwareUtilizations, hardwareMemoryUsages);
-      printf("Hardware load scores for the devices is %f, %f, %f\n", hardwareScores[0], hardwareScores[1], hardwareScores[2]);
+      printf("Hardware load scores for the devices is %f, %f\n", hardwareScores[0], hardwareScores[1]);
       int minimumUsedHardwareDevice = minimumUsedDevice(hardwareScores);
 
       printf("Putting job into device %d\n", minimumUsedHardwareDevice);
