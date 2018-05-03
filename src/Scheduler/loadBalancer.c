@@ -246,38 +246,38 @@ void sendPacket (int sessfd, int jobID, int  exeID, char* executablePath, char* 
   fd = open(executablePath, O_RDONLY);
   int exeNameSize = strlen(executablePath);
   int exeDataSize = sizeOfFile(fd);
-  char* exeData = malloc(size);
+  char* exeData = malloc(exeDataSize);
   read(fd, exeData, exeDataSize);
   close(fd);
 
   // Read text file data
-  if (workloadType == 0) {
-    fd = open(dataPath, O_RDONLY);
-    int dataNameSize = strlen(dataPath);
-    int textDataSize = sizeOfFile(fd);
-    char* textData = malloc(size);
-    read(fd, textData, textDataSize);
-    close(fd);
-  }
+  fd = open(dataPath, O_RDONLY);
+  int dataNameSize = strlen(dataPath);
+  int textDataSize = sizeOfFile(fd);
+  char* textData = malloc(textDataSize);
+  read(fd, textData, textDataSize);
+  close(fd);
 
   int numTextFiles = 1;
 
   // Create send buffer
-  int sendBufferSize = 7*sizeof(int) + exeNameSize + dataNameSize + exeDataSize + textDataSize;
+  int sendBufferSize = 8*sizeof(int) + exeNameSize + dataNameSize + exeDataSize + textDataSize;
   char* sendBuffer = malloc(sendBufferSize);
+  int sizeOfArray = sendBufferSize - sizeof(int);
 
   // Put all data into send buffer (marshal)
-  memcpy(sendBuffer, &jobID, sizeof(int));
-  memcpy(sendBuffer+sizeof(int), &exeID, sizeof(int));
-  memcpy(sendBuffer+2*sizeof(int), &exeNameSize, sizeof(int));
-  memcpy(sendBuffer+3*sizeof(int), executablePath, exeNameSize);
-  memcpy(sendBuffer+3*sizeof(int)+exeNameSize, &exeDataSize, sizeof(int));
-  memcpy(sendBuffer+4*sizeof(int)+exeNameSize, exeData, exeDataSize);
-  memcpy(sendBuffer+4*sizeof(int)+exeNameSize+exeDataSize, &numTextFiles, sizeof(int));
-  memcpy(sendBuffer+5*sizeof(int)+exeNameSize+exeDataSize, &dataNameSize, sizeof(int));
-  memcpy(sendBuffer+6*sizeof(int)+exeNameSize+exeDataSize, dataPath, dataNameSize);
-  memcpy(sendBuffer+6*sizeof(int)+exeNameSize+exeDataSize+dataNameSize, &textDataSize, sizeof(int));
-  memcpy(sendBuffer+7*sizeof(int)+exeNameSize+exeDataSize+dataNameSize, textData, textDataSize);
+  memcpy(sendBuffer, &sizeOfArray, sizeof(int));
+  memcpy(sendBuffer+sizeof(int), &jobID, sizeof(int));
+  memcpy(sendBuffer+2*sizeof(int), &exeID, sizeof(int));
+  memcpy(sendBuffer+3*sizeof(int), &exeNameSize, sizeof(int));
+  memcpy(sendBuffer+4*sizeof(int), executablePath, exeNameSize);
+  memcpy(sendBuffer+4*sizeof(int)+exeNameSize, &exeDataSize, sizeof(int));
+  memcpy(sendBuffer+5*sizeof(int)+exeNameSize, exeData, exeDataSize);
+  memcpy(sendBuffer+5*sizeof(int)+exeNameSize+exeDataSize, &numTextFiles, sizeof(int));
+  memcpy(sendBuffer+6*sizeof(int)+exeNameSize+exeDataSize, &dataNameSize, sizeof(int));
+  memcpy(sendBuffer+7*sizeof(int)+exeNameSize+exeDataSize, dataPath, dataNameSize);
+  memcpy(sendBuffer+7*sizeof(int)+exeNameSize+exeDataSize+dataNameSize, &textDataSize, sizeof(int));
+  memcpy(sendBuffer+8*sizeof(int)+exeNameSize+exeDataSize+dataNameSize, textData, textDataSize);
 
   // Send data
   send(sessfd, sendBuffer, sendBufferSize, 0);
@@ -288,7 +288,11 @@ void sendPacket (int sessfd, int jobID, int  exeID, char* executablePath, char* 
 
 }
 
-void sendToHardwareDevice (HardwareDevice H, int sessfd) {
+void sendToHardwareDevice (void* threadArgs) {
+
+  struct senderArgs* args = (struct senderArgs*)threadArgs;
+  HardwareDevice H = args->H;
+  int sessfd = args->sessfd;
 
   while(1) {
 
@@ -325,7 +329,12 @@ void updateDeviceStats (HardwareDevice H, float capUtilization, float capMemoryU
 
 }
 
-void receiveFromHardwareDevice (HardwareDevice H) {
+void receiveFromHardwareDevice (void* threadArgs) {
+
+  struct receiverArgs* args = (struct receiverArgs*)threadArgs;
+
+  HardwareDevice H = args->H;
+  int sockfd = args->sockfd;
 
   while (1) {
 
@@ -353,12 +362,12 @@ void receiveFromHardwareDevice (HardwareDevice H) {
     recv(sockfd, initialReceive, 2*sizeof(int), MSG_WAITALL);
 
     // Unmarshal the first two ints
-    memcpy(&bufSize, &(data[0]), sizeof(int));
-    memcpy(&functionality, &(data[1]), sizeof(int));
+    memcpy(&bufSize, &(initialReceive[0]), sizeof(int));
+    memcpy(&functionality, &(initialReceive[1]), sizeof(int));
 
     switch (functionality) {
       // Receive a result file
-      case (0):
+      case (RESULT_FILE):
         buf = malloc(bufSize);
         recv(sockfd, buf, bufSize, MSG_WAITALL);
 
@@ -378,19 +387,21 @@ void receiveFromHardwareDevice (HardwareDevice H) {
         break;
 
       // Update statistical data about device
-      case (1):
+      case (HARDWARE_STATS):
         buf = malloc(4*sizeof(float));
         recv(sockfd, buf, 4*sizeof(float), MSG_WAITALL);
 
-        memcpy(&capUtilization, buf, sizeof(float));
-        memcpy(&capMemoryUsage, buf+sizeof(float), sizeof(float));
-        memcpy(&utilization, buf+2*sizeof(float), sizeof(float));
-        memcpy(&memoryUsage, buf+3*sizeof(float), sizeof(float));
+        memcpy(&utilization, buf, sizeof(float));
+        memcpy(&memoryUsage, buf+sizeof(float), sizeof(float));
+        memcpy(&capUtilization, buf+2*sizeof(float), sizeof(float));
+        memcpy(&capMemoryUsage, buf+3*sizeof(float), sizeof(float));
 
-        updateDeviceStats (H, capUtilization, capMemoryUsage, utilization, memoryUsage);
+        updateDeviceStats(H, capUtilization, capMemoryUsage, utilization, memoryUsage);
 
         free(buf);
         break;
+
+
     }
 
   }

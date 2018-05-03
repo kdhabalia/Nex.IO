@@ -56,11 +56,11 @@ void doit(int fd)
   recv(fd, funcNumber, 4, MSG_WAITALL);
   memcpy(&whichFunction, funcNumber, 4);
   if(whichFunction == SYSTEM_STATE) {
-    int registeredDevices = numberOfDevices();
-    send(fd, &registeredDevices, INT_SIZE, 0);
+    int numDevices = numberOfDevices();
+    send(fd, &numDevices, INT_SIZE, 0);
     float* infoArray;
     //MARIOS INFO ARRAY FUNCTION CALL IS HERE
-    for(int i = 0; i < registeredDevices; i++) {
+    for(int i = 0; i < numDevices; i++) {
       infoArray = deviceStats(i);
       send(fd, infoArray, 4*INT_SIZE, 0);
       free(infoArray);
@@ -87,7 +87,33 @@ void doit(int fd)
     free(bufferToRecv);
     close(copyFd);
   } else if(whichFunction == NEW_DEVICE) {
-    printf("Connected succesfully\n");
+    float hardwareStats[4];
+    float capUtilization;
+    float capMemoryUsage;
+    float utilization;
+    float memoryUsage;
+
+    recv(fd, hardwareStats, 4*sizeof(float), MSG_WAITALL);
+    capUtilization = hardwareStats[2];
+    capMemoryUsage = hardwareStats[3];
+    utilization = hardwareStats[0];
+    memoryUsage = hardwareStats[1];
+
+    HardwareDevice H = registerDevice(capUtilization, capMemoryUsage, utilization, memoryUsage);
+
+    struct senderArgs* sArgs = malloc(sizeof(struct senderArgs));
+    sArgs->H = H;
+    sArgs->sessfd = fd;
+
+    pthread_t sendNodeWorker;
+    pthread_create(&sendNodeWorker, NULL, sendToHardwareDevice, (void*)sArgs);
+
+    struct receiverArgs* rArgs = malloc(sizeof(struct receiverArgs));
+    rArgs->H = H;
+    rArgs->sockfd = fd;
+
+    pthread_t receiveNodeWorker;
+    pthread_create(&receiveNodeWorker, NULL, receiveFromHardwareDevice, (void*)rArgs);
   }
 }
 

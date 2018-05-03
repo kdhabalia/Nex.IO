@@ -13,6 +13,9 @@
 #include <fcntl.h>
 #include "../Queue/queue.h"
 
+#define RESULT_FILE 0
+#define HARDWARE_STATS 1
+
 typedef struct Workload* WorkloadPacket;
 struct Workload {
 
@@ -38,13 +41,27 @@ struct Device {
 
 };
 
+struct senderArgs {
+
+  HardwareDevice H;
+  int sessfd;
+
+};
+
+struct receiverArgs {
+
+  HardwareDevice H;
+  int sockfd;
+
+};
+
 extern Queue inQ;
 
 extern int registeredDevices;
 
 extern HardwareDevice* devices;
 
-HardwareDevice registerDevice (char* deviceIP, float capUtilization, float capMemoryUsage, float utilization, float memoryUsage);
+HardwareDevice registerDevice (float capUtilization, float capMemoryUsage, float utilization, float memoryUsage);
 
 void updateDeviceStats (HardwareDevice H, float capUtilization, float capMemoryUsage, float utilization, float memoryUsage);
 
@@ -56,5 +73,7 @@ HardwareDevice grabDevice (int index);
 
 float* deviceStats (int index);
 
+void sendToHardwareDevice (void* threadArgs);
 
+void receiveFromHardwareDevice (void* threadArgs);
 
