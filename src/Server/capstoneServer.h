@@ -7,6 +7,7 @@
 #define SYSTEM_STATE 0
 #define SEND_FILE 1
 #define INT_SIZE 4
+#define NEW_DEVICE 2
 
 
 

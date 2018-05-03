@@ -20,12 +20,6 @@ int main(int argc, char **argv)
 
     inQ = queueInit();
 
-    pthread_t D0worker;
-    pthread_create(&D0worker, NULL, Device, (void*)"0");
-
-    pthread_t D1worker;
-    pthread_create(&D1worker, NULL, Device, (void*)"1");
-
     pthread_t EPworker;
     pthread_create(&EPworker, NULL, enqueueNewPacket, (void*)NULL);
 
@@ -42,60 +36,6 @@ int main(int argc, char **argv)
 		  connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
 			sbuf_insert(&sbuf, connfd);
     }
-}
-
-float randomFloat()
-{
-  float r = (float)rand()/(float)RAND_MAX;
-  return r;
-}
-
-void Device (void* threadArgs) {
-
-  char* IP = (char*)threadArgs;
-
-  float DcapU = randomFloat();
-  DcapU = (DcapU < 0.5) ? 0.5 : DcapU;
-  float DcapMU = randomFloat();
-  DcapMU = (DcapMU < 0.6) ? 0.6 : DcapMU;
-  float DU = randomFloat();
-  DU = (DU > 0.4) ? 0.43 : DU;
-  float DMU = randomFloat();
-  DMU = (DMU > 0.4) ? 0.43 : DMU;
-
-  HardwareDevice H = registerDevice(IP, DcapU, DcapMU, DU, DMU);
-  printf("Device %s registered\n", IP);
-
-  int currentPacketCount = 0;
-  time_t seconds = time(NULL);
-  while (1) {
-
-    int l = queueLength(H->Q);
-    if (l > currentPacketCount) {
-      DU += 0.15;
-      DU = (DU > 1.0) ? 1.0 : DU;
-      DMU += 0.12;
-      DMU = (DMU > 1.0) ? 1.0 : DMU;
-      updateDeviceStats(H, DcapU, DcapMU, DU, DMU);
-
-      currentPacketCount++;
-    }
-
-    if (l > 0 && time(NULL) - seconds > 10) {
-      seconds = time(NULL);
-      void* e = queueDequeue(H->Q);
-      DU -= 0.15;
-      DMU -= 0.12;
-      updateDeviceStats(H, DcapU, DcapMU, DU, DMU);
-      currentPacketCount--;
-    }
-
-    if (l == 0) {
-      seconds = time(NULL);
-    }
-
-  }
-
 }
 
 void* thread(void* vargp)
@@ -146,7 +86,8 @@ void doit(int fd)
     free(result);
     free(bufferToRecv);
     close(copyFd);
+  } else if(whichFunction == NEW_DEVICE) {
+    printf("Connected succesfully\n");
   }
-
 }
 

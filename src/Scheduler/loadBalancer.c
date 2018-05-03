@@ -52,7 +52,7 @@ int eval (void* e) {
 
 }
 
-HardwareDevice registerDevice (char* deviceIP, float capUtilization, float capMemoryUsage, float utilization, float memoryUsage) {
+HardwareDevice registerDevice (float capUtilization, float capMemoryUsage, float utilization, float memoryUsage) {
 
   pthread_mutex_lock(&mLock);
 
@@ -68,7 +68,6 @@ HardwareDevice registerDevice (char* deviceIP, float capUtilization, float capMe
   new->utilization = utilization;
   new->capMemoryUsage = capMemoryUsage;
   new->capUtilization = capUtilization;
-  new->deviceIP = deviceIP;
 
   registeredDevices++;
   newDevices[registeredDevices-1] = new;
@@ -78,17 +77,6 @@ HardwareDevice registerDevice (char* deviceIP, float capUtilization, float capMe
   pthread_mutex_unlock(&mLock);
 
   return new;
-
-}
-
-void updateDeviceStats (HardwareDevice H, float capUtilization, float capMemoryUsage, float utilization, float memoryUsage) {
-
-  pthread_rwlock_wrlock(&(H->lock));
-  H->capUtilization = capUtilization;
-  H->capMemoryUsage = capMemoryUsage;
-  H->utilization = utilization;
-  H->memoryUsage = memoryUsage;
-  pthread_rwlock_unlock(&(H->lock));
 
 }
 
@@ -241,15 +229,6 @@ void* emptyHardwareQueue (HardwareDevice H) {
 
 }
 
-char* hardwareDeviceIP (HardwareDevice H) {
-
-  pthread_rwlock_rdlock(&(H->lock));
-  char* deviceIP = H->deviceIP;
-  pthread_rwlock_unlock(&(H->lock));
-  return deviceIP;
-
-}
-
 int sizeOfFile (int fd) {
 
   struct stat S;
@@ -259,154 +238,158 @@ int sizeOfFile (int fd) {
 
 }
 
-void sendToHardwareDevice (HardwareDevice H) {
+void sendPacket (int sessfd, int jobID, int  exeID, char* executablePath, char* dataPath, int workloadType) {
 
-  // Connection variables
-  char *serverport;
-  unsigned short port;
-  int sockfd;
-  int sessfd;
-  int rv;
-  struct sockaddr_in srv;
-  struct sockaddr_in cli;
-  socklen_t sa_size;
-
-  char* buf;
-  char* sendBuffer;
   int fd;
-  int size;
 
-  int serverPort = 80;
+  // Read executable data
+  fd = open(executablePath, O_RDONLY);
+  int exeNameSize = strlen(executablePath);
+  int exeDataSize = sizeOfFile(fd);
+  char* exeData = malloc(size);
+  read(fd, exeData, exeDataSize);
+  close(fd);
 
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  // Read text file data
+  if (workloadType == 0) {
+    fd = open(dataPath, O_RDONLY);
+    int dataNameSize = strlen(dataPath);
+    int textDataSize = sizeOfFile(fd);
+    char* textData = malloc(size);
+    read(fd, textData, textDataSize);
+    close(fd);
+  }
 
-  memset(&srv, 0, sizeof(srv));     // clear it first
-  srv.sin_family = AF_INET;     // IP family
-  srv.sin_addr.s_addr = htonl(INADDR_ANY);  // don't care IP address
-  srv.sin_port = htons(port);     // server port
+  int numTextFiles = 1;
 
-  // bind to our port
-  rv = bind(sockfd, (struct sockaddr*)&srv, sizeof(struct sockaddr));
+  // Create send buffer
+  int sendBufferSize = 7*sizeof(int) + exeNameSize + dataNameSize + exeDataSize + textDataSize;
+  char* sendBuffer = malloc(sendBufferSize);
 
-  // start listening for connections
-  rv = listen(sockfd, 0);
+  // Put all data into send buffer (marshal)
+  memcpy(sendBuffer, &jobID, sizeof(int));
+  memcpy(sendBuffer+sizeof(int), &exeID, sizeof(int));
+  memcpy(sendBuffer+2*sizeof(int), &exeNameSize, sizeof(int));
+  memcpy(sendBuffer+3*sizeof(int), executablePath, exeNameSize);
+  memcpy(sendBuffer+3*sizeof(int)+exeNameSize, &exeDataSize, sizeof(int));
+  memcpy(sendBuffer+4*sizeof(int)+exeNameSize, exeData, exeDataSize);
+  memcpy(sendBuffer+4*sizeof(int)+exeNameSize+exeDataSize, &numTextFiles, sizeof(int));
+  memcpy(sendBuffer+5*sizeof(int)+exeNameSize+exeDataSize, &dataNameSize, sizeof(int));
+  memcpy(sendBuffer+6*sizeof(int)+exeNameSize+exeDataSize, dataPath, dataNameSize);
+  memcpy(sendBuffer+6*sizeof(int)+exeNameSize+exeDataSize+dataNameSize, &textDataSize, sizeof(int));
+  memcpy(sendBuffer+7*sizeof(int)+exeNameSize+exeDataSize+dataNameSize, textData, textDataSize);
 
-  // Wait for client, get session socket
-  sa_size = sizeof(struct sockaddr_in);
-  sessfd = accept(sockfd, (struct sockaddr *)&cli, &sa_size);
+  // Send data
+  send(sessfd, sendBuffer, sendBufferSize, 0);
+
+  free(exeData);
+  free(textData);
+  free(sendBuffer);
+
+}
+
+void sendToHardwareDevice (HardwareDevice H, int sessfd) {
 
   while(1) {
 
+    char* buf;
+    char* sendBuffer;
+
     WorkloadPacket e = (WorkloadPacket)emptyHardwareQueue(H);
+
+    if (e == NULL) {
+      continue;
+    }
 
     char* executablePath = e->executablePath;
     char* dataPath = e->dataPath;
 
-    fd = open(executablePath, O_RDONLY);
+    sendPacket(sessfd, e->jobID, e->exeID, e->executablePath, e->dataPath, e->workloadType);
 
-    size = sizeOfFile(fd);
-    buf = malloc(size);
-
-    read(fd, buf, size);
-
-    sendBuffer = malloc(sizeof(int)+size);
-    memcpy(sendBuffer, &size, sizeof(int));
-    memcpy(sendBuffer+sizeof(int), buf, size);
-
-    // Send back to client
-    send(sessfd, sendBuffer, (sizeof(int)+size), 0);
-
-    close(fd);
-    free(buf);
-    free(sendBuffer);
-
-    fd = open(dataPath, O_RDONLY);
-
-    size = sizeOfFile(fd);
-    buf = malloc(size);
-
-    read(fd, buf, size);
-
-    sendBuffer = malloc(sizeof(int)+size);
-    memcpy(sendBuffer, &size, sizeof(int));
-    memcpy(sendBuffer+sizeof(int), buf, size);
-
-    send(sessfd, sendBuffer, (sizeof(int)+size), 0);
-
-    close(fd);
-    free(buf);
-    free(sendBuffer);
-
-    free(dataPath);
-    free(executablePath);
+    free(e->dataPath);
+    free(e->executablePath);
     free(e);
 
   }
 
 }
 
-void receiveFromHardwareDevice (HardwareDevice H) {
+void updateDeviceStats (HardwareDevice H, float capUtilization, float capMemoryUsage, float utilization, float memoryUsage) {
 
-  char *serverip;
-  char *serverport;
-  unsigned short port;
-  int rv;
-  struct sockaddr_in srv;
-  int sockfd;
-
-  // In this case the server is the Hardware Device
-  pthread_rwlock_rdlock(&(H->lock));
-  serverip = H->deviceIP;
+  pthread_rwlock_wrlock(&(H->lock));
+  H->capUtilization = capUtilization;
+  H->capMemoryUsage = capMemoryUsage;
+  H->utilization = utilization;
+  H->memoryUsage = memoryUsage;
   pthread_rwlock_unlock(&(H->lock));
 
-  serverport = 80;
+}
 
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+void receiveFromHardwareDevice (HardwareDevice H) {
 
-  memset(&srv, 0, sizeof(srv));
-  srv.sin_family = AF_INET;
-  srv.sin_addr.s_addr = inet_addr(serverip);
-  srv.sin_port = htons(port);
-
-  rv = connect(sockfd, (struct sockaddr*)&srv, sizeof(struct sockaddr));
-
-  int size;
-  int functionality;
-  float capUtilization;
-  float capMemoryUsage;
-  float utilization;
-  float memoryUsage;
-  float data[4];
   while (1) {
 
+    int bufSize;
+    char* buf;
+    int initialReceive[2];
+
+    int functionality;
+
+    // Text data
+    int jobID;
+    int exeID;
+    int textNameSize;
+    char* textName;
+    int textDataSize;
+    char* textData;
+
+    // Hardware Utilization stats
+    float utilization;
+    float memoryUsage;
+    float capMemoryUsage;
+    float capUtilization;
+
     // First receive the intent from the client
-    recv(sockfd, &functionality, sizeof(int), MSG_WAITALL);
+    recv(sockfd, initialReceive, 2*sizeof(int), MSG_WAITALL);
+
+    // Unmarshal the first two ints
+    memcpy(&bufSize, &(data[0]), sizeof(int));
+    memcpy(&functionality, &(data[1]), sizeof(int));
 
     switch (functionality) {
       // Receive a result file
       case (0):
-        recv(sockfd, &size, sizeof(int), MSG_WAITALL);
-        char* buf = malloc(size);
-        recv(sockfd, buf, size, MSG_WAITALL);
+        buf = malloc(bufSize);
+        recv(sockfd, buf, bufSize, MSG_WAITALL);
+
+        memcpy(&jobID, buf, sizeof(int));
+        memcpy(&exeID, buf+sizeof(int), sizeof(int));
+        memcpy(&textNameSize, buf+2*sizeof(int), sizeof(int));
+        textName = malloc(textNameSize);
+        memcpy(textName, buf+3*sizeof(int), textNameSize);
+        memcpy(&textDataSize, buf+3*sizeof(int)+textNameSize, sizeof(int));
+        textData = malloc(textDataSize);
+        memcpy(textData, buf+4*sizeof(int)+textNameSize, textDataSize);
         // Write buf to an output file in filesystem
+
+        free(buf);
+        free(textName);
+        free(textData);
         break;
 
       // Update statistical data about device
       case (1):
-        // Receive the four values all at once
-        recv(sockfd, &data, 4*sizeof(float), MSG_WAITALL);
+        buf = malloc(4*sizeof(float));
+        recv(sockfd, buf, 4*sizeof(float), MSG_WAITALL);
 
-        memcpy(&capUtilization, &(data[0]), sizeof(float));
-        memcpy(&capMemoryUsage, &(data[1]), sizeof(float));
-        memcpy(&utilization, &(data[2]), sizeof(float));
-        memcpy(&memoryUsage, &(data[3]), sizeof(float));
+        memcpy(&capUtilization, buf, sizeof(float));
+        memcpy(&capMemoryUsage, buf+sizeof(float), sizeof(float));
+        memcpy(&utilization, buf+2*sizeof(float), sizeof(float));
+        memcpy(&memoryUsage, buf+3*sizeof(float), sizeof(float));
 
-        pthread_rwlock_wrlock(&(H->lock));
-        H->capUtilization = capUtilization;
-        H->capMemoryUsage = capMemoryUsage;
-        H->utilization = utilization;
-        H->memoryUsage = memoryUsage;
-        pthread_rwlock_unlock(&(H->lock));
+        updateDeviceStats (H, capUtilization, capMemoryUsage, utilization, memoryUsage);
+
+        free(buf);
         break;
     }
 

@@ -17,6 +17,7 @@ typedef struct Workload* WorkloadPacket;
 struct Workload {
 
   int jobID;
+  int exeID;
   char* executablePath;
   char* dataPath;
   int load;
@@ -27,7 +28,6 @@ struct Workload {
 typedef struct Device* HardwareDevice;
 struct Device {
 
-  char* deviceIP;
   float capUtilization;
   float capMemoryUsage;
   float utilization;

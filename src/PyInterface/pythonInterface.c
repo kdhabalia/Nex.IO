@@ -102,50 +102,67 @@ void enqueueNewPacket () {
     while ((stat(fullname, &S) == -1) || (numLines(fullname) != 4));
 
     int jobID;
+    int exeID;
     const char* tempEP = malloc(50);
     const char* tempDP = malloc(50);
     int load;
     int workloadType;
 
+    char* buf;
+
     FILE* fp = fopen(fullname, "r");
 
-    char* buf0 = malloc(50);
-    fgets(buf0, 50, fp);
-    l = strlen(buf0);
-    buf0[l-1] = '\0';
-    jobID = atoi(buf0);
-    free(buf0);
+    // Job ID
+    buf = malloc(50);
+    fgets(buf, 50, fp);
+    l = strlen(buf);
+    buf[l-1] = '\0';
+    jobID = atoi(buf);
+    free(buf);
 
-    char* buf1 = malloc(50);
-    fgets(buf1, 50, fp);
-    l = strlen(buf1);
-    buf1[l-1] = '\0';
-    strcpy(tempEP, buf1);
-    free(buf1);
+    // EXE ID
+    buf = malloc(50);
+    fgets(buf, 50, fp);
+    l = strlen(buf);
+    buf[l-1] = '\0';
+    jobID = atoi(buf);
+    free(buf);
 
-    char* buf2 = malloc(50);
-    fgets(buf2, 50, fp);
-    l = strlen(buf2);
-    buf2[l-1] = '\0';
-    strcpy(tempDP, buf2);
-    free(buf2);
+    // EXE pathname
+    buf = malloc(50);
+    fgets(buf, 50, fp);
+    l = strlen(buf);
+    buf[l-1] = '\0';
+    strcpy(tempEP, buf);
+    free(buf);
 
-    char* buf3 = malloc(50);
-    fgets(buf3, 50, fp);
-    l = strlen(buf3);
-    buf3[l-1] = '\0';
-    load = atoi(buf3);
-    free(buf3);
+    // Textfiles pathname
+    buf = malloc(50);
+    fgets(buf, 50, fp);
+    l = strlen(buf);
+    buf[l-1] = '\0';
+    strcpy(tempDP, buf);
+    free(buf);
 
-    char* buf4 = malloc(50);
-    fgets(buf4, 50, fp);
-    l = strlen(buf4);
-    buf4[l-1] = '\0';
-    workloadType = atoi(buf4);
-    free(buf4);
+    // load weight
+    buf = malloc(50);
+    fgets(buf, 50, fp);
+    l = strlen(buf);
+    buf[l-1] = '\0';
+    load = atoi(buf);
+    free(buf);
+
+    // load type - Fully Independant or Reduce
+    buf = malloc(50);
+    fgets(buf, 50, fp);
+    l = strlen(buf);
+    buf[l-1] = '\0';
+    workloadType = atoi(buf);
+    free(buf);
 
     WorkloadPacket WP = malloc(sizeof(struct Workload));
     WP->jobID = jobID;
+    WP->exeID = exeID;
     WP->executablePath = malloc(strlen(tempEP)+1);
     memcpy(WP->executablePath, tempEP, strlen(tempEP)+1);
     WP->dataPath = malloc(strlen(tempDP)+1);
