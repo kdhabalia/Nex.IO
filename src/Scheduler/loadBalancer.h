@@ -36,6 +36,8 @@ struct Device {
   float utilization;
   float memoryUsage;
   Queue Q;
+  int numLaunched;
+  WorkloadPacket* launchedPackets;
 
   pthread_rwlock_t lock;
 

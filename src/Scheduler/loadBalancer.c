@@ -64,6 +64,8 @@ HardwareDevice registerDevice (float capUtilization, float capMemoryUsage, float
   HardwareDevice new = malloc(sizeof(struct Device));
   pthread_rwlock_init(&(new->lock), NULL);
   new->Q = queueInit();
+  new->numLaunched = 0;
+  new->launchedPackets = NULL;
   new->memoryUsage = memoryUsage;
   new->utilization = utilization;
   new->capMemoryUsage = capMemoryUsage;
@@ -238,6 +240,26 @@ int sizeOfFile (int fd) {
 
 }
 
+void addLaunchedData (HardwareDevice H, WorkloadPacket e) {
+
+  pthread_rwlock_wrlock(&(H->lock));
+
+  WorkloadPacket* newPackets = malloc((H->numLaunched+1) * sizeof(WorkloadPacket));
+  for (int i = 0; i < H->numLaunched; i++) {
+    newPackets[i] = H->launchedPackets[i];
+  }
+
+  H->numLaunched++;
+  newPackets[H->numLaunched-1] = e;
+
+  free(H->launchedPackets);
+
+  H->launchedPackets = newPackets;
+
+  pthread_rwlock_unlock(&(H->lock));
+
+}
+
 void sendPacket (int sessfd, int jobID, int  exeID, char* executablePath, char* dataPath, int workloadType) {
 
   int fd;
@@ -305,14 +327,14 @@ void sendToHardwareDevice (void* threadArgs) {
       continue;
     }
 
-    char* executablePath = e->executablePath;
-    char* dataPath = e->dataPath;
+    else {
+      char* executablePath = e->executablePath;
+      char* dataPath = e->dataPath;
 
-    sendPacket(sessfd, e->jobID, e->exeID, e->executablePath, e->dataPath, e->workloadType);
+      sendPacket(sessfd, e->jobID, e->exeID, e->executablePath, e->dataPath, e->workloadType);
 
-    free(e->dataPath);
-    free(e->executablePath);
-    free(e);
+      addLaunchedData(H, e);
+   }
 
   }
 
@@ -325,6 +347,36 @@ void updateDeviceStats (HardwareDevice H, float capUtilization, float capMemoryU
   H->capMemoryUsage = capMemoryUsage;
   H->utilization = utilization;
   H->memoryUsage = memoryUsage;
+  pthread_rwlock_unlock(&(H->lock));
+
+}
+
+void removeLaunchedData (HardwareDevice H, int jobID, int exeID) {
+
+  pthread_rwlock_wrlock(&(H->lock));
+
+  int* newPackets = malloc((H->numLaunched-1) * sizeof(WorkloadPacket));
+
+  for (int i = 0; i < H->numLaunched; i++) {
+    WorkloadPacket e = H->launchedPackets[i];
+
+    if (e->jobID == jobID && e->exeID == exeID) {
+      free(e->dataPath);
+      free(e->executablePath);
+      free(e);
+      continue;
+    }
+    else {
+      newPackets = e;
+    }
+  }
+
+  H->numLaunched--;
+
+  free(H->launchedPackets);
+
+  H->launchedPackets = newPackets;
+
   pthread_rwlock_unlock(&(H->lock));
 
 }
@@ -379,6 +431,9 @@ void receiveFromHardwareDevice (void* threadArgs) {
         memcpy(&textDataSize, buf+3*sizeof(int)+textNameSize, sizeof(int));
         textData = malloc(textDataSize);
         memcpy(textData, buf+4*sizeof(int)+textNameSize, textDataSize);
+
+        removeLaunchedData(H, jobID, exeID);
+
         // Write buf to an output file in filesystem
 
         free(buf);
