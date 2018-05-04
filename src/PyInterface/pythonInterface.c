@@ -177,6 +177,8 @@ void enqueueNewPacket () {
 
     currentPacket++;
 
+    fclose(fp);
+
   }
 
 }

@@ -30,3 +30,5 @@ int queueLength (Queue Q);
 
 Queue queueInit ();
 
+void queueFree (Queue Q);
+

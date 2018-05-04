@@ -15,6 +15,7 @@
 
 #define RESULT_FILE 0
 #define HARDWARE_STATS 1
+#define UNREGISTER 2
 
 typedef struct Workload* WorkloadPacket;
 struct Workload {
@@ -31,6 +32,7 @@ struct Workload {
 typedef struct Device* HardwareDevice;
 struct Device {
 
+  int ID;
   float capUtilization;
   float capMemoryUsage;
   float utilization;
@@ -54,14 +56,11 @@ struct receiverArgs {
 
   HardwareDevice H;
   int sockfd;
+  pthread_t sendNodeWorker;
 
 };
 
 extern Queue inQ;
-
-extern int registeredDevices;
-
-extern HardwareDevice* devices;
 
 HardwareDevice registerDevice (float capUtilization, float capMemoryUsage, float utilization, float memoryUsage);
 

@@ -111,6 +111,7 @@ void doit(int fd)
     struct receiverArgs* rArgs = malloc(sizeof(struct receiverArgs));
     rArgs->H = H;
     rArgs->sockfd = fd;
+    rArgs->sendNodeWorker = sendNodeWorker;
 
     pthread_t receiveNodeWorker;
     pthread_create(&receiveNodeWorker, NULL, receiveFromHardwareDevice, (void*)rArgs);

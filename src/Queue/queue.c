@@ -77,4 +77,10 @@ Queue queueInit () {
 
 }
 
+void queueFree (Queue Q) {
+
+  free(Q);
+
+}
+
 
