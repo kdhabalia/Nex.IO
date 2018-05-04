@@ -174,8 +174,11 @@ void balanceLoads (void* threadArgs) {
 
   while (1) {
 
-    if (queueLength(inQ) != 0 && numberOfDevices() != 0) {
+    if (queueLength(inQ) > 0 && numberOfDevices() > 0) {
       pthread_mutex_lock(&mLock);
+
+      printf("LB: %d devices available\n", registeredDevices);
+      printf("LB: %d packets available\n", queueLength(inQ));
 
       void* e = queueDequeue(inQ);
 
@@ -289,6 +292,8 @@ void sendPacket (int sessfd, int jobID, int  exeID, char* executablePath, char* 
   // Send data
   send(sessfd, sendBuffer, sendBufferSize, 0);
 
+  printf("SN: Sent packet for job: %d and exe: %d\n", jobID, exeID);
+
   free(exeData);
   free(textData);
   free(sendBuffer);
@@ -314,6 +319,7 @@ void sendToHardwareDevice (void* threadArgs) {
     WorkloadPacket e = (WorkloadPacket)emptyHardwareQueue(H);
 
     if (e != NULL) {
+      printf("SN: Sending packet for job: %d and exe: %d\n", e->jobID, e->exeID);
       sendPacket(sessfd, e->jobID, e->exeID, e->executablePath, e->dataPath, e->workloadType);
     }
 
@@ -336,7 +342,7 @@ void removeLaunchedData (HardwareDevice H, int jobID, int exeID) {
 
   pthread_rwlock_wrlock(&(H->lock));
 
-  int* newPackets = malloc((H->numLaunched-1) * sizeof(WorkloadPacket));
+  WorkloadPacket* newPackets = malloc((H->numLaunched-1) * sizeof(WorkloadPacket));
 
   for (int i = 0; i < H->numLaunched; i++) {
     WorkloadPacket e = H->launchedPackets[i];
@@ -347,7 +353,7 @@ void removeLaunchedData (HardwareDevice H, int jobID, int exeID) {
       free(e);
     }
     else {
-      newPackets = e;
+      newPackets[i] = e;
     }
   }
 
@@ -451,6 +457,7 @@ void receiveFromHardwareDevice (void* threadArgs) {
     switch (functionality) {
       // Receive a result file
       case (RESULT_FILE):
+        printf("RN: Receiving result file\n");
         buf = malloc(bufSize);
         recv(sockfd, buf, bufSize, MSG_WAITALL);
 
@@ -465,6 +472,8 @@ void receiveFromHardwareDevice (void* threadArgs) {
 
         removeLaunchedData(H, jobID, exeID);
 
+        printf("RN: Received result file for job: %d and exe: %d\n", jobID, exeID);
+
         // Write buf to an output file in filesystem
 
         free(buf);
@@ -474,6 +483,7 @@ void receiveFromHardwareDevice (void* threadArgs) {
 
       // Update statistical data about device
       case (HARDWARE_STATS):
+        printf("RN: Receiving hardware stats\n");
         buf = malloc(4*sizeof(float));
         recv(sockfd, buf, 4*sizeof(float), MSG_WAITALL);
 
@@ -484,11 +494,15 @@ void receiveFromHardwareDevice (void* threadArgs) {
 
         updateDeviceStats(H, capUtilization, capMemoryUsage, utilization, memoryUsage);
 
+        printf("RN: Received hardware stats\n");
+
         free(buf);
         break;
 
       case (UNREGISTER):
+        printf("RN: Unregistering device\n");
         unregisterDevice(H, sendNodeWorker);
+        printf("RN: Unregistered device, exiting\n");
         pthread_exit(NULL);
         break;
     }

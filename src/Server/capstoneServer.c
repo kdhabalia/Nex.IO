@@ -93,13 +93,19 @@ void doit(int fd)
     float utilization;
     float memoryUsage;
 
+    printf("Server: Device connected\n");
+
     recv(fd, hardwareStats, 4*sizeof(float), MSG_WAITALL);
     capUtilization = hardwareStats[2];
     capMemoryUsage = hardwareStats[3];
     utilization = hardwareStats[0];
     memoryUsage = hardwareStats[1];
 
+    printf("Server: Received hardware stats\n");
+
     HardwareDevice H = registerDevice(capUtilization, capMemoryUsage, utilization, memoryUsage);
+
+    printf("Server: Registered device\n");
 
     struct senderArgs* sArgs = malloc(sizeof(struct senderArgs));
     sArgs->H = H;
@@ -108,6 +114,8 @@ void doit(int fd)
     pthread_t sendNodeWorker;
     pthread_create(&sendNodeWorker, NULL, sendToHardwareDevice, (void*)sArgs);
 
+    printf("Server: Launched send node\n");
+
     struct receiverArgs* rArgs = malloc(sizeof(struct receiverArgs));
     rArgs->H = H;
     rArgs->sockfd = fd;
@@ -115,6 +123,8 @@ void doit(int fd)
 
     pthread_t receiveNodeWorker;
     pthread_create(&receiveNodeWorker, NULL, receiveFromHardwareDevice, (void*)rArgs);
+
+    printf("Server: Launched receive node\n");
   }
 }
 
