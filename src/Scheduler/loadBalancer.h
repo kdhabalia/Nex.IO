@@ -17,6 +17,8 @@
 #define HARDWARE_STATS 1
 #define UNREGISTER 2
 
+#define MAX_QUEUE_SIZE 10000
+
 typedef struct Workload* WorkloadPacket;
 struct Workload {
 

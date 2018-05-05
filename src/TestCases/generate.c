@@ -8,7 +8,7 @@ int main() {
   FILE* fp;
   fp = fopen("array.txt", "w");
 
-  for (int i = 0; i < 100000000; i++) {
+  for (int i = 0; i < 10; i++) {
     fprintf(fp, "%d\n", i);
   }
 

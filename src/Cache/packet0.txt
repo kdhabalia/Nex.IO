@@ -1,0 +1,6 @@
+5
+5
+../TestCases/Map
+../TestCases/array.txt
+1
+0

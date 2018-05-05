@@ -70,7 +70,7 @@ HardwareDevice registerDevice (float capUtilization, float capMemoryUsage, float
   HardwareDevice new = malloc(sizeof(struct Device));
   pthread_rwlock_init(&(new->lock), NULL);
   new->ID = registeredDevices;
-  new->Q = queueInit();
+  new->Q = queueInit(MAX_QUEUE_SIZE);
   new->numLaunched = 0;
   new->launchedPackets = NULL;
   new->memoryUsage = memoryUsage;
@@ -190,7 +190,12 @@ void balanceLoads (void* threadArgs) {
       int minimumUsedHardwareDevice = minimumUsedDevice(hardwareScores);
 
       Queue outQ = (devices[minimumUsedHardwareDevice])->Q;
-      queueEnqueue(outQ, e);
+      while (1) {
+        int rv = queueEnqueue(outQ, e);
+        if (rv == 0) {
+          break;
+        }
+      }
 
       pthread_mutex_unlock(&mLock);
     }
@@ -380,7 +385,12 @@ void unregisterDevice (HardwareDevice H, pthread_t sendNodeWorker) {
       break;
     }
     else {
-      queueEnqueue(inQ, (void*)e);
+      while (1) {
+        int rv = queueEnqueue(inQ, (void*)e);
+        if (rv == 0) {
+          break;
+        }
+      }
     }
   }
 
@@ -388,7 +398,12 @@ void unregisterDevice (HardwareDevice H, pthread_t sendNodeWorker) {
 
   for (int i = 0; i < H->numLaunched; i++) {
     WorkloadPacket e = H->launchedPackets[i];
-    queueEnqueue(inQ, (void*)e);
+    while (1) {
+      int rv = queueEnqueue(inQ, (void*)e);
+      if (rv == 0) {
+        break;
+      }
+    }
   }
 
   free(H->launchedPackets);
@@ -429,7 +444,7 @@ void receiveFromHardwareDevice (void* threadArgs) {
 
     int bufSize;
     char* buf;
-    int initialReceive[2];
+    char initialReceive[2*sizeof(int)];
 
     int functionality;
 
@@ -442,17 +457,19 @@ void receiveFromHardwareDevice (void* threadArgs) {
     char* textData;
 
     // Hardware Utilization stats
-    float utilization;
-    float memoryUsage;
-    float capMemoryUsage;
-    float capUtilization;
+    int utilization;
+    int memoryUsage;
+    int capMemoryUsage;
+    int capUtilization;
 
     // First receive the intent from the client
     recv(sockfd, initialReceive, 2*sizeof(int), MSG_WAITALL);
 
     // Unmarshal the first two ints
-    memcpy(&functionality, &(initialReceive[0]), sizeof(int));
-    memcpy(&bufSize, &(initialReceive[1]), sizeof(int));
+    memcpy(&functionality, initialReceive, sizeof(int));
+    memcpy(&bufSize, initialReceive+sizeof(int), sizeof(int));
+
+    printf("RN: Received data from device with functionality: %d\n", functionality);
 
     switch (functionality) {
       // Receive a result file
@@ -484,15 +501,17 @@ void receiveFromHardwareDevice (void* threadArgs) {
       // Update statistical data about device
       case (HARDWARE_STATS):
         printf("RN: Receiving hardware stats\n");
-        buf = malloc(4*sizeof(float));
-        recv(sockfd, buf, 4*sizeof(float), MSG_WAITALL);
+        buf = malloc(4*sizeof(int));
+        recv(sockfd, buf, 4*sizeof(int), MSG_WAITALL);
 
-        memcpy(&utilization, buf, sizeof(float));
-        memcpy(&memoryUsage, buf+sizeof(float), sizeof(float));
-        memcpy(&capUtilization, buf+2*sizeof(float), sizeof(float));
-        memcpy(&capMemoryUsage, buf+3*sizeof(float), sizeof(float));
+        memcpy(&utilization, buf, sizeof(int));
+        memcpy(&memoryUsage, buf+sizeof(int), sizeof(int));
+        memcpy(&capUtilization, buf+2*sizeof(int), sizeof(int));
+        memcpy(&capMemoryUsage, buf+3*sizeof(int), sizeof(int));
 
-        updateDeviceStats(H, capUtilization, capMemoryUsage, utilization, memoryUsage);
+        printf("RN: Got these hardware stats: %d, %d, %d, %d\n", utilization, memoryUsage, capUtilization, capMemoryUsage);
+
+        updateDeviceStats(H, (float)capUtilization, (float)capMemoryUsage, (float)utilization, (float)memoryUsage);
 
         printf("RN: Received hardware stats\n");
 

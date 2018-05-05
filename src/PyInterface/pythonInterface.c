@@ -99,7 +99,7 @@ void enqueueNewPacket () {
     free(num);
 
     struct stat S;
-    while ((stat(fullname, &S) == -1) || (numLines(fullname) != 4));
+    while ((stat(fullname, &S) == -1) || (numLines(fullname) < 5));
 
     int jobID;
     int exeID;
@@ -125,7 +125,7 @@ void enqueueNewPacket () {
     fgets(buf, 50, fp);
     l = strlen(buf);
     buf[l-1] = '\0';
-    jobID = atoi(buf);
+    exeID = atoi(buf);
     free(buf);
 
     // EXE pathname
@@ -178,6 +178,8 @@ void enqueueNewPacket () {
     currentPacket++;
 
     fclose(fp);
+
+    printf("EP: Enqueued packet with jobID: %d, exeID: %d\n", jobID, exeID);
 
   }
 

@@ -16,19 +16,20 @@ struct Queue {
   Bin front;
   Bin back;
   int length;
+  int maxSize;
   pthread_rwlock_t lock;
 
 };
 
 int queueLoad (Queue Q, int (*eval)(void*));
 
-void queueEnqueue (Queue Q, void* e);
+int queueEnqueue (Queue Q, void* e);
 
 void* queueDequeue (Queue Q);
 
 int queueLength (Queue Q);
 
-Queue queueInit ();
+Queue queueInit (int maxSize);
 
 void queueFree (Queue Q);
 

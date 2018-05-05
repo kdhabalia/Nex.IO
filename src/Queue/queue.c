@@ -16,13 +16,18 @@ int queueLoad (Queue Q, int (*eval)(void*)) {
 
 }
 
-void queueEnqueue (Queue Q, void* e) {
+int queueEnqueue (Queue Q, void* e) {
+
+  pthread_rwlock_wrlock(&(Q->lock));
+  if (Q->length == Q->maxSize) {
+    pthread_rwlock_unlock(&(Q->lock));
+    return -1;
+  }
 
   Bin newBin = malloc(sizeof(struct Bin));
   newBin->element = e;
   newBin->next = NULL;
 
-  pthread_rwlock_wrlock(&(Q->lock));
   if (Q->length == 0) {
     Q->front = newBin;
     Q->back = newBin;
@@ -34,6 +39,8 @@ void queueEnqueue (Queue Q, void* e) {
   }
   Q->length++;
   pthread_rwlock_unlock(&(Q->lock));
+
+  return 0;
 
 }
 
@@ -66,12 +73,13 @@ int queueLength (Queue Q) {
 
 }
 
-Queue queueInit () {
+Queue queueInit (int maxSize) {
 
   Queue Q = malloc(sizeof(struct Queue));
   Q->front = NULL;
   Q->back = NULL;
   Q->length = 0;
+  Q->maxSize = maxSize;
   pthread_rwlock_init(&(Q->lock), NULL);
   return Q;
 

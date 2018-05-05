@@ -18,7 +18,7 @@ int main(int argc, char **argv)
     // Launches threads for separate components
     srand(time(NULL));
 
-    inQ = queueInit();
+    inQ = queueInit(MAX_QUEUE_SIZE);
 
     pthread_t EPworker;
     pthread_create(&EPworker, NULL, enqueueNewPacket, (void*)NULL);
@@ -51,10 +51,12 @@ void* thread(void* vargp)
 
 void doit(int fd)
 {
+  printf("Server: Someone connected\n");
   char funcNumber[4];
   int whichFunction;
   recv(fd, funcNumber, 4, MSG_WAITALL);
   memcpy(&whichFunction, funcNumber, 4);
+  printf("Server: Got connection identifier %d\n", whichFunction);
   if(whichFunction == SYSTEM_STATE) {
     int numDevices = numberOfDevices();
     send(fd, &numDevices, INT_SIZE, 0);
@@ -87,23 +89,23 @@ void doit(int fd)
     free(bufferToRecv);
     close(copyFd);
   } else if(whichFunction == NEW_DEVICE) {
-    float hardwareStats[4];
-    float capUtilization;
-    float capMemoryUsage;
-    float utilization;
-    float memoryUsage;
+    char hardwareStats[4*sizeof(int)];
+    int capUtilization;
+    int capMemoryUsage;
+    int utilization;
+    int memoryUsage;
 
-    printf("Server: Device connected\n");
+    printf("Server: Device connected with fd: %d\n", fd);
 
-    recv(fd, hardwareStats, 4*sizeof(float), MSG_WAITALL);
-    capUtilization = hardwareStats[2];
-    capMemoryUsage = hardwareStats[3];
-    utilization = hardwareStats[0];
-    memoryUsage = hardwareStats[1];
+    recv(fd, hardwareStats, 4*sizeof(int), MSG_WAITALL);
+    memcpy(&utilization, hardwareStats, sizeof(int));
+    memcpy(&memoryUsage, hardwareStats+sizeof(int), sizeof(int));
+    memcpy(&capUtilization, hardwareStats+2*sizeof(int), sizeof(int));
+    memcpy(&capMemoryUsage, hardwareStats+3*sizeof(int), sizeof(int));
 
-    printf("Server: Received hardware stats\n");
+    printf("Server: Received hardware stats %d, %d, %d, %d\n", utilization, memoryUsage, capUtilization, capMemoryUsage);
 
-    HardwareDevice H = registerDevice(capUtilization, capMemoryUsage, utilization, memoryUsage);
+    HardwareDevice H = registerDevice((float)capUtilization, (float)capMemoryUsage, (float)utilization, (float)memoryUsage);
 
     printf("Server: Registered device\n");
 
@@ -125,6 +127,9 @@ void doit(int fd)
     pthread_create(&receiveNodeWorker, NULL, receiveFromHardwareDevice, (void*)rArgs);
 
     printf("Server: Launched receive node\n");
+
+    pthread_join(sendNodeWorker, NULL);
+    pthread_join(receiveNodeWorker, NULL);
   }
 }
 
