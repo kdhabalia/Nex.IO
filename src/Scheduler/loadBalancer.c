@@ -193,6 +193,7 @@ void balanceLoads (void* threadArgs) {
       while (1) {
         int rv = queueEnqueue(outQ, e);
         if (rv == 0) {
+          printf("LB: Enqueued packet into Hardware Device: %d\n", (devices[minimumUsedHardwareDevice])->ID);
           break;
         }
       }
@@ -253,25 +254,46 @@ int sizeOfFile (int fd) {
 
 }
 
+char* stripFilename (char* filename) {
+
+  int l = strlen(filename);
+  int i = 0;
+  int lastOccurence = 0;
+  while (i < l) {
+    if (filename[i] == '/') {
+      lastOccurence = i;
+    }
+    i++;
+  }
+
+  char* stripped = malloc(l-lastOccurence);
+  memcpy(stripped, filename+lastOccurence+1, l-lastOccurence);
+  free(filename);
+  return stripped;
+
+}
+
 void sendPacket (int sessfd, int jobID, int  exeID, char* executablePath, char* dataPath, int workloadType) {
 
   int fd;
 
   // Read executable data
   fd = open(executablePath, O_RDONLY);
-  int exeNameSize = strlen(executablePath);
   int exeDataSize = sizeOfFile(fd);
   char* exeData = malloc(exeDataSize);
   read(fd, exeData, exeDataSize);
   close(fd);
+  executablePath = stripFilename(executablePath);
+  int exeNameSize = strlen(executablePath);
 
   // Read text file data
   fd = open(dataPath, O_RDONLY);
-  int dataNameSize = strlen(dataPath);
   int textDataSize = sizeOfFile(fd);
   char* textData = malloc(textDataSize);
   read(fd, textData, textDataSize);
   close(fd);
+  dataPath = stripFilename(dataPath);
+  int dataNameSize = strlen(dataPath);
 
   int numTextFiles = 1;
 
@@ -303,6 +325,8 @@ void sendPacket (int sessfd, int jobID, int  exeID, char* executablePath, char* 
 
   printf("SN: Sent packet for job: %d and exe: %d\n", jobID, exeID);
 
+  free(dataPath);
+  free(executablePath);
   free(exeData);
   free(textData);
   free(sendBuffer);
@@ -331,7 +355,6 @@ void sendToHardwareDevice (void* threadArgs) {
       printf("SN: Sending packet for job: %d and exe: %d\n", e->jobID, e->exeID);
       sendPacket(sessfd, e->jobID, e->exeID, e->executablePath, e->dataPath, e->workloadType);
     }
-
   }
 
 }

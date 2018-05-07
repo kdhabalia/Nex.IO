@@ -103,8 +103,8 @@ void enqueueNewPacket () {
 
     int jobID;
     int exeID;
-    const char* tempEP = malloc(50);
-    const char* tempDP = malloc(50);
+    char* tempEP = malloc(50);
+    char* tempDP = malloc(50);
     int load;
     int workloadType;
 
@@ -179,7 +179,7 @@ void enqueueNewPacket () {
 
     fclose(fp);
 
-    printf("EP: Enqueued packet with jobID: %d, exeID: %d\n", jobID, exeID);
+    printf("EP: Enqueued packet with jobID: %d, exeID: %d, exe pathname: %s, data pathname: %s\n", jobID, exeID, WP->executablePath, WP->dataPath);
 
   }
 

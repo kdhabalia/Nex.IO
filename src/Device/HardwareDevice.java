@@ -67,7 +67,7 @@ public class HardwareDevice implements Runnable {
   public void device () {
 
     try {
-      startConnection("128.2.13.145", 15746);
+      startConnection("128.2.13.145", 15744);
     }
     catch (Exception e) {
       return;
@@ -131,10 +131,14 @@ public class HardwareDevice implements Runnable {
 
       int exeDataSize = buf.getInt();
 
+      System.out.println("exe data size = "+exeDataSize);
+
       byte[] exeData = new byte[exeDataSize];
       buf.get(exeData, 0, exeDataSize);
 
       int numberTextFiles = buf.getInt();
+
+      System.out.println("number of text files = "+numberTextFiles);
 
       int textNameSize = buf.getInt();
 
@@ -146,15 +150,17 @@ public class HardwareDevice implements Runnable {
 
       int textDataSize = buf.getInt();
 
+      System.out.println("data size = "+textDataSize);
+
       byte[] textData = new byte[textDataSize];
       buf.get(textData, 0, textDataSize);
 
       System.out.println("jobID = "+jobID+" exeID = "+exeID+" exeName = "+exeName+" dataName = "+textName);
 
-      FileOutputStream fExe = new FileOutputStream("./Map");
+      FileOutputStream fExe = new FileOutputStream("./"+exeName);
       fExe.write(exeData);
 
-      FileOutputStream fText = new FileOutputStream("./array.txt");
+      FileOutputStream fText = new FileOutputStream("./"+textName);
       fText.write(textData);
 
       Runtime.getRuntime().exec("chmod +x Map");
