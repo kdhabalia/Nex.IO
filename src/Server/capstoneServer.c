@@ -97,7 +97,12 @@ void doit(int fd)
 
     printf("Server: Device connected with fd: %d\n", fd);
 
-    recv(fd, hardwareStats, 4*sizeof(int), MSG_WAITALL);
+    int rv = recv(fd, hardwareStats, 4*sizeof(int), MSG_WAITALL);
+    if (rv == -1) {
+      printf("Server: Unable to receive hardware stats from device, errno: %d\n", errno);
+      return;
+    }
+
     memcpy(&utilization, hardwareStats, sizeof(int));
     memcpy(&memoryUsage, hardwareStats+sizeof(int), sizeof(int));
     memcpy(&capUtilization, hardwareStats+2*sizeof(int), sizeof(int));
@@ -130,6 +135,8 @@ void doit(int fd)
 
     pthread_join(sendNodeWorker, NULL);
     pthread_join(receiveNodeWorker, NULL);
+
+    printf("Server: Device was unregistered and terminated\n");
   }
 }
 

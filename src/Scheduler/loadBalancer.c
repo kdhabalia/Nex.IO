@@ -295,7 +295,11 @@ void sendPacket (int sessfd, int jobID, int  exeID, char* executablePath, char* 
   memcpy(sendBuffer+8*sizeof(int)+exeNameSize+exeDataSize+dataNameSize, textData, textDataSize);
 
   // Send data
-  send(sessfd, sendBuffer, sendBufferSize, 0);
+  int rv = send(sessfd, sendBuffer, sendBufferSize, 0);
+  if (rv == -1) {
+    printf("SN: Unable to send workload to device, errno: %d\n", errno);
+    return;
+  }
 
   printf("SN: Sent packet for job: %d and exe: %d\n", jobID, exeID);
 
@@ -463,7 +467,13 @@ void receiveFromHardwareDevice (void* threadArgs) {
     int capUtilization;
 
     // First receive the intent from the client
-    recv(sockfd, initialReceive, 2*sizeof(int), MSG_WAITALL);
+    int rv;
+    rv = recv(sockfd, initialReceive, 2*sizeof(int), MSG_WAITALL);
+    if (rv == -1) {
+      unregisterDevice(H, sendNodeWorker);
+      printf("RN: Unable to receive intent from device, errno: %d\n", errno);
+      return;
+    }
 
     // Unmarshal the first two ints
     memcpy(&functionality, initialReceive, sizeof(int));
@@ -476,7 +486,12 @@ void receiveFromHardwareDevice (void* threadArgs) {
       case (RESULT_FILE):
         printf("RN: Receiving result file\n");
         buf = malloc(bufSize);
-        recv(sockfd, buf, bufSize, MSG_WAITALL);
+        rv = recv(sockfd, buf, bufSize, MSG_WAITALL);
+        if (rv == -1) {
+          unregisterDevice(H, sendNodeWorker);
+          printf("RN: Unable to receive result file from device, errno: %d\n", errno);
+          return;
+        }
 
         memcpy(&jobID, buf, sizeof(int));
         memcpy(&exeID, buf+sizeof(int), sizeof(int));
@@ -502,7 +517,12 @@ void receiveFromHardwareDevice (void* threadArgs) {
       case (HARDWARE_STATS):
         printf("RN: Receiving hardware stats\n");
         buf = malloc(4*sizeof(int));
-        recv(sockfd, buf, 4*sizeof(int), MSG_WAITALL);
+        rv = recv(sockfd, buf, 4*sizeof(int), MSG_WAITALL);
+        if (rv == -1) {
+          unregisterDevice(H, sendNodeWorker);
+          printf("RN: Unable to receive hardware stats from device, errno: %d\n", errno);
+          return;
+        }
 
         memcpy(&utilization, buf, sizeof(int));
         memcpy(&memoryUsage, buf+sizeof(int), sizeof(int));

@@ -1,6 +1,7 @@
 import java.net.*;
 import java.io.*;
 import java.nio.*;
+import java.lang.*;
 
 public class HardwareDevice implements Runnable {
   private Socket socket;
@@ -41,7 +42,7 @@ public class HardwareDevice implements Runnable {
     int i = 0;
     while (true) {
 
-      if (currentTime() - time >= 1.0 && i < 5) {
+      if (currentTime() - time >= 3.0) {
         try {
           outStream.write(bufferInt(1));
           outStream.write(bufferInt(16));
@@ -66,7 +67,7 @@ public class HardwareDevice implements Runnable {
   public void device () {
 
     try {
-      startConnection("128.2.13.145", 15745);
+      startConnection("128.2.13.145", 15746);
     }
     catch (Exception e) {
       return;
@@ -149,6 +150,18 @@ public class HardwareDevice implements Runnable {
       buf.get(textData, 0, textDataSize);
 
       System.out.println("jobID = "+jobID+" exeID = "+exeID+" exeName = "+exeName+" dataName = "+textName);
+
+      FileOutputStream fExe = new FileOutputStream("./Map");
+      fExe.write(exeData);
+
+      FileOutputStream fText = new FileOutputStream("./array.txt");
+      fText.write(textData);
+
+      Runtime.getRuntime().exec("chmod +x Map");
+      System.out.println("Changed permissions on exe");
+      //Runtime.getRuntime().exec("./Map");
+      //System.out.println("Executed exe");
+
       }
       catch (Exception e ) {
         System.out.println("Unable to read data");
