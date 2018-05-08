@@ -215,6 +215,8 @@ void addLaunchedData (HardwareDevice H, WorkloadPacket e) {
   H->numLaunched++;
   newPackets[H->numLaunched-1] = e;
 
+  printf("Adding in %s, %s\n", e->executablePath, e->dataPath);
+
   free(H->launchedPackets);
 
   H->launchedPackets = newPackets;
@@ -254,10 +256,13 @@ int sizeOfFile (int fd) {
 
 }
 
-char* stripFilename (char* filename) {
+char* stripFilename (char* filename, int textFile) {
 
-  int l = strlen(filename);
-  int i = 0;
+  int l;
+  int i;
+
+  l = strlen(filename);
+  i = 0;
   int lastOccurence = 0;
   while (i < l) {
     if (filename[i] == '/') {
@@ -266,39 +271,170 @@ char* stripFilename (char* filename) {
     i++;
   }
 
-  char* stripped = malloc(l-lastOccurence);
-  memcpy(stripped, filename+lastOccurence+1, l-lastOccurence);
-  free(filename);
-  return stripped;
+  char* stripped;
+
+  if (lastOccurence > 0) {
+    stripped = malloc(l-lastOccurence);
+    memcpy(stripped, filename+lastOccurence+1, l-lastOccurence);
+    free(filename);
+  }
+  else {
+    stripped = filename;
+  }
+
+  if (!textFile) {
+    return stripped;
+  }
+
+  int digits = 0;
+  for (int j = 0; j < strlen(stripped); j++) {
+    if (isdigit(stripped[j])) {
+      digits++;
+    }
+  }
+
+  l = strlen(stripped)-digits+1;
+  char* noDigits = malloc(l);
+  i = 0;
+  for (int j = 0; j < strlen(stripped); j++) {
+    if (isdigit(stripped[j])) {
+      continue;
+    }
+    else {
+      noDigits[i] = stripped[j];
+      i++;
+    }
+  }
+
+  noDigits[l-1] = '\0';
+  free(stripped);
+
+  return noDigits;
+
+}
+
+int numberRecombineFiles (char* dataPath) {
+
+  struct dirent *de;
+
+  DIR *dr = opendir(dataPath);
+  if (dr == NULL) {
+    printf("SN: Unable to open data path directory for recombine step\n");
+  }
+
+  int num = 0;
+  while ((de = readdir(dr)) != NULL) {
+    char* ret = strstr(de->d_name, ".txt");
+    if (ret != NULL) {
+      num++;
+    }
+  }
+
+  closedir(dr);
+
+  return num;
 
 }
 
 void sendPacket (int sessfd, int jobID, int  exeID, char* executablePath, char* dataPath, int workloadType) {
 
   int fd;
+  int* textDataSizes;
+  int* textNameSizes;
+  char** textNameArray;
+  char** textDataArray;
+  int numTextFiles;
+
+  char* exePath = malloc(strlen(executablePath)+1);
+  strcpy(exePath, executablePath);
+  char* dPath = malloc(strlen(dataPath)+1);
+  strcpy(dPath, dataPath);
 
   // Read executable data
-  fd = open(executablePath, O_RDONLY);
+  fd = open(exePath, O_RDONLY);
   int exeDataSize = sizeOfFile(fd);
   char* exeData = malloc(exeDataSize);
   read(fd, exeData, exeDataSize);
   close(fd);
-  executablePath = stripFilename(executablePath);
-  int exeNameSize = strlen(executablePath);
+  exePath = stripFilename(exePath, 0);
+  int exeNameSize = strlen(exePath);
 
-  // Read text file data
-  fd = open(dataPath, O_RDONLY);
-  int textDataSize = sizeOfFile(fd);
-  char* textData = malloc(textDataSize);
-  read(fd, textData, textDataSize);
-  close(fd);
-  dataPath = stripFilename(dataPath);
-  int dataNameSize = strlen(dataPath);
+  if (workloadType == MAP) {
+    printf("SN: Sending a map job\n");
+    // Read text file data
+    fd = open(dPath, O_RDONLY);
+    int textDataSize = sizeOfFile(fd);
+    char* textData = malloc(textDataSize);
+    read(fd, textData, textDataSize);
+    close(fd);
 
-  int numTextFiles = 1;
+    dPath = stripFilename(dPath, 1);
+    int textNameSize = strlen(dPath);
+
+    textDataSizes = malloc(sizeof(int));
+    textNameSizes = malloc(sizeof(int));
+    textNameArray = malloc(sizeof(char*));
+    textDataArray = malloc(sizeof(char*));
+
+    textDataSizes[0] = textDataSize;
+    textNameSizes[0] = textNameSize;
+    textNameArray[0] = dPath;
+    textDataArray[0] = textData;
+
+    numTextFiles = 1;
+  }
+  else {
+    printf("SN: Sending a recombine job\n");
+    numTextFiles = numberRecombineFiles(dPath);
+    textDataSizes = malloc(numTextFiles*sizeof(int));
+    textNameSizes = malloc(numTextFiles*sizeof(int));
+    textNameArray = malloc(numTextFiles*sizeof(char*));
+    textDataArray = malloc(numTextFiles*sizeof(char*));
+
+    struct dirent *de;
+
+    DIR *dr = opendir(dPath);
+    if (dr == NULL) {
+      printf("SN: Unable to open data path directory for recombine step\n");
+    }
+
+    int i = 0;
+    while ((de = readdir(dr)) != NULL) {
+      char* ret = strstr(de->d_name, ".txt");
+      if (ret != NULL) {
+        char* textName = malloc(strlen(de->d_name)+1);
+        char* fullName = malloc(strlen(de->d_name)+strlen(dPath)+1);
+        strcpy(textName, de->d_name);
+        strcpy(fullName, dPath);
+        strcat(fullName, textName);
+
+        fd = open(fullName, O_RDONLY);
+        int textDataSize = sizeOfFile(fd);
+        char* textData = malloc(textDataSize);
+        read(fd, textData, textDataSize);
+        close(fd);
+
+        textDataSizes[i] = textDataSize;
+        textNameSizes[i] = strlen(textName);
+        textNameArray[i] = textName;
+        textDataArray[i] = textData;
+
+        free(fullName);
+        i++;
+      }
+    }
+
+    free(dPath);
+    closedir(dr);
+  }
 
   // Create send buffer
-  int sendBufferSize = 8*sizeof(int) + exeNameSize + dataNameSize + exeDataSize + textDataSize;
+  int sendBufferSize = 6*sizeof(int) + exeNameSize + exeDataSize;
+  for (int i = 0; i < numTextFiles; i++) {
+    sendBufferSize += 2*sizeof(int);
+    sendBufferSize += textDataSizes[i];
+    sendBufferSize += textNameSizes[i];
+  }
   char* sendBuffer = malloc(sendBufferSize);
   int sizeOfArray = sendBufferSize - sizeof(int);
 
@@ -307,14 +443,19 @@ void sendPacket (int sessfd, int jobID, int  exeID, char* executablePath, char* 
   memcpy(sendBuffer+sizeof(int), &jobID, sizeof(int));
   memcpy(sendBuffer+2*sizeof(int), &exeID, sizeof(int));
   memcpy(sendBuffer+3*sizeof(int), &exeNameSize, sizeof(int));
-  memcpy(sendBuffer+4*sizeof(int), executablePath, exeNameSize);
+  memcpy(sendBuffer+4*sizeof(int), exePath, exeNameSize);
   memcpy(sendBuffer+4*sizeof(int)+exeNameSize, &exeDataSize, sizeof(int));
   memcpy(sendBuffer+5*sizeof(int)+exeNameSize, exeData, exeDataSize);
   memcpy(sendBuffer+5*sizeof(int)+exeNameSize+exeDataSize, &numTextFiles, sizeof(int));
-  memcpy(sendBuffer+6*sizeof(int)+exeNameSize+exeDataSize, &dataNameSize, sizeof(int));
-  memcpy(sendBuffer+7*sizeof(int)+exeNameSize+exeDataSize, dataPath, dataNameSize);
-  memcpy(sendBuffer+7*sizeof(int)+exeNameSize+exeDataSize+dataNameSize, &textDataSize, sizeof(int));
-  memcpy(sendBuffer+8*sizeof(int)+exeNameSize+exeDataSize+dataNameSize, textData, textDataSize);
+
+  int byteOffset = 0;
+  for (int i = 0; i < numTextFiles; i++) {
+    memcpy(sendBuffer+6*sizeof(int)+exeNameSize+exeDataSize+byteOffset, &(textNameSizes[i]), sizeof(int));
+    memcpy(sendBuffer+7*sizeof(int)+exeNameSize+exeDataSize+byteOffset, textNameArray[i], textNameSizes[i]);
+    memcpy(sendBuffer+7*sizeof(int)+exeNameSize+exeDataSize+textNameSizes[i]+byteOffset, &(textDataSizes[i]), sizeof(int));
+    memcpy(sendBuffer+8*sizeof(int)+exeNameSize+exeDataSize+textNameSizes[i]+byteOffset, textDataArray[i], textDataSizes[i]);
+    byteOffset += 2*sizeof(int) + textNameSizes[i] + textDataSizes[i];
+  }
 
   // Send data
   int rv = send(sessfd, sendBuffer, sendBufferSize, 0);
@@ -325,10 +466,17 @@ void sendPacket (int sessfd, int jobID, int  exeID, char* executablePath, char* 
 
   printf("SN: Sent packet for job: %d and exe: %d\n", jobID, exeID);
 
-  free(dataPath);
-  free(executablePath);
+  for (int i = 0; i < numTextFiles; i++) {
+    free(textNameArray[i]);
+    free(textDataArray[i]);
+  }
+
+  free(textNameArray);
+  free(textDataArray);
+  free(textDataSizes);
+  free(textNameSizes);
+  free(exePath);
   free(exeData);
-  free(textData);
   free(sendBuffer);
 
 }
@@ -427,6 +575,7 @@ void unregisterDevice (HardwareDevice H, pthread_t sendNodeWorker) {
     WorkloadPacket e = H->launchedPackets[i];
     while (1) {
       int rv = queueEnqueue(inQ, (void*)e);
+      printf("Putting back in %s, %s\n", e->executablePath, e->dataPath);
       if (rv == 0) {
         break;
       }
@@ -457,6 +606,16 @@ void unregisterDevice (HardwareDevice H, pthread_t sendNodeWorker) {
 
 }
 
+void writeResultFile (char* textName, char* textData, int textDataSize, int jobID, int exeID) {
+
+  // int to string
+  char* num = malloc(30);
+  //itoa(currentPacket, num, 10);
+
+
+
+}
+
 void receiveFromHardwareDevice (void* threadArgs) {
 
   Pthread_detach(pthread_self());
@@ -473,7 +632,7 @@ void receiveFromHardwareDevice (void* threadArgs) {
     char* buf;
     char initialReceive[2*sizeof(int)];
 
-    int functionality;
+    int functionality = -1;
 
     // Text data
     int jobID;
@@ -512,6 +671,7 @@ void receiveFromHardwareDevice (void* threadArgs) {
         rv = recv(sockfd, buf, bufSize, MSG_WAITALL);
         if (rv == -1) {
           unregisterDevice(H, sendNodeWorker);
+          free(buf);
           printf("RN: Unable to receive result file from device, errno: %d\n", errno);
           return;
         }
@@ -519,8 +679,9 @@ void receiveFromHardwareDevice (void* threadArgs) {
         memcpy(&jobID, buf, sizeof(int));
         memcpy(&exeID, buf+sizeof(int), sizeof(int));
         memcpy(&textNameSize, buf+2*sizeof(int), sizeof(int));
-        textName = malloc(textNameSize);
+        textName = malloc(textNameSize + 1);
         memcpy(textName, buf+3*sizeof(int), textNameSize);
+        memcpy(textName+textNameSize, '\0', sizeof(char));
         memcpy(&textDataSize, buf+3*sizeof(int)+textNameSize, sizeof(int));
         textData = malloc(textDataSize);
         memcpy(textData, buf+4*sizeof(int)+textNameSize, textDataSize);
@@ -530,6 +691,7 @@ void receiveFromHardwareDevice (void* threadArgs) {
         printf("RN: Received result file for job: %d and exe: %d\n", jobID, exeID);
 
         // Write buf to an output file in filesystem
+        writeResultFile(textName, textData, textDataSize, jobID, exeID);
 
         free(buf);
         free(textName);
@@ -543,6 +705,7 @@ void receiveFromHardwareDevice (void* threadArgs) {
         rv = recv(sockfd, buf, 4*sizeof(int), MSG_WAITALL);
         if (rv == -1) {
           unregisterDevice(H, sendNodeWorker);
+          free(buf);
           printf("RN: Unable to receive hardware stats from device, errno: %d\n", errno);
           return;
         }
@@ -551,6 +714,13 @@ void receiveFromHardwareDevice (void* threadArgs) {
         memcpy(&memoryUsage, buf+sizeof(int), sizeof(int));
         memcpy(&capUtilization, buf+2*sizeof(int), sizeof(int));
         memcpy(&capMemoryUsage, buf+3*sizeof(int), sizeof(int));
+
+        if (utilization == 0 || memoryUsage == 0 || capUtilization == 0 || capMemoryUsage == 0) {
+          unregisterDevice(H, sendNodeWorker);
+          free(buf);
+          printf("RN: Receiving erroneous hardware stats, terminating device\n");
+          return;
+        }
 
         printf("RN: Got these hardware stats: %d, %d, %d, %d\n", utilization, memoryUsage, capUtilization, capMemoryUsage);
 

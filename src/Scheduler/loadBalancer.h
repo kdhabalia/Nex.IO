@@ -11,6 +11,8 @@
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <ctype.h>
+#include <dirent.h>
 #include "../Queue/queue.h"
 
 #define RESULT_FILE 0

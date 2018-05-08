@@ -87,9 +87,9 @@ void enqueueNewPacket () {
   int l;
   while (1) {
 
-    char* num = malloc(30);
+    char* num = malloc(BUFSIZE);
 
-    itoa(currentPacket, num, 10);
+    itoa(currentPacket, num, BUFSIZE);
     char* fullname = malloc(strlen(filename)+strlen(num)+strlen(suffix)+1);
 
     strcpy(fullname, filename);
@@ -103,8 +103,8 @@ void enqueueNewPacket () {
 
     int jobID;
     int exeID;
-    char* tempEP = malloc(50);
-    char* tempDP = malloc(50);
+    char* tempEP = malloc(BUFSIZE);
+    char* tempDP = malloc(BUFSIZE);
     int load;
     int workloadType;
 
@@ -113,48 +113,48 @@ void enqueueNewPacket () {
     FILE* fp = fopen(fullname, "r");
 
     // Job ID
-    buf = malloc(50);
-    fgets(buf, 50, fp);
+    buf = malloc(BUFSIZE);
+    fgets(buf, BUFSIZE, fp);
     l = strlen(buf);
     buf[l-1] = '\0';
     jobID = atoi(buf);
     free(buf);
 
     // EXE ID
-    buf = malloc(50);
-    fgets(buf, 50, fp);
+    buf = malloc(BUFSIZE);
+    fgets(buf, BUFSIZE, fp);
     l = strlen(buf);
     buf[l-1] = '\0';
     exeID = atoi(buf);
     free(buf);
 
     // EXE pathname
-    buf = malloc(50);
-    fgets(buf, 50, fp);
+    buf = malloc(BUFSIZE);
+    fgets(buf, BUFSIZE, fp);
     l = strlen(buf);
     buf[l-1] = '\0';
     strcpy(tempEP, buf);
     free(buf);
 
     // Textfiles pathname
-    buf = malloc(50);
-    fgets(buf, 50, fp);
+    buf = malloc(BUFSIZE);
+    fgets(buf, BUFSIZE, fp);
     l = strlen(buf);
     buf[l-1] = '\0';
     strcpy(tempDP, buf);
     free(buf);
 
     // load weight
-    buf = malloc(50);
-    fgets(buf, 50, fp);
+    buf = malloc(BUFSIZE);
+    fgets(buf, BUFSIZE, fp);
     l = strlen(buf);
     buf[l-1] = '\0';
     load = atoi(buf);
     free(buf);
 
     // load type - Fully Independant or Reduce
-    buf = malloc(50);
-    fgets(buf, 50, fp);
+    buf = malloc(BUFSIZE);
+    fgets(buf, BUFSIZE, fp);
     l = strlen(buf);
     buf[l-1] = '\0';
     workloadType = atoi(buf);

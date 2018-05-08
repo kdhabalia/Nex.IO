@@ -140,28 +140,28 @@ public class HardwareDevice implements Runnable {
 
       System.out.println("number of text files = "+numberTextFiles);
 
-      int textNameSize = buf.getInt();
+      for (int i = 0; i < numberTextFiles; i++) {
+        int textNameSize = buf.getInt();
 
-      temp = new byte[textNameSize];
-      buf.get(temp, 0, textNameSize);
-      String textName = new String(temp);
+        temp = new byte[textNameSize];
+        buf.get(temp, 0, textNameSize);
+        String textName = new String(temp);
 
-      System.out.println("textName = "+textName);
+        System.out.println("textName = "+textName);
 
-      int textDataSize = buf.getInt();
+        int textDataSize = buf.getInt();
 
-      System.out.println("data size = "+textDataSize);
+        System.out.println("data size = "+textDataSize);
 
-      byte[] textData = new byte[textDataSize];
-      buf.get(textData, 0, textDataSize);
+        byte[] textData = new byte[textDataSize];
+        buf.get(textData, 0, textDataSize);
 
-      System.out.println("jobID = "+jobID+" exeID = "+exeID+" exeName = "+exeName+" dataName = "+textName);
+        FileOutputStream fText = new FileOutputStream("./"+textName);
+        fText.write(textData);
+      }
 
       FileOutputStream fExe = new FileOutputStream("./"+exeName);
       fExe.write(exeData);
-
-      FileOutputStream fText = new FileOutputStream("./"+textName);
-      fText.write(textData);
 
       Runtime.getRuntime().exec("chmod +x Map");
       System.out.println("Changed permissions on exe");
