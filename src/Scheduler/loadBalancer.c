@@ -215,8 +215,6 @@ void addLaunchedData (HardwareDevice H, WorkloadPacket e) {
   H->numLaunched++;
   newPackets[H->numLaunched-1] = e;
 
-  printf("Adding in %s, %s\n", e->executablePath, e->dataPath);
-
   free(H->launchedPackets);
 
   H->launchedPackets = newPackets;
@@ -522,6 +520,11 @@ void removeLaunchedData (HardwareDevice H, int jobID, int exeID) {
 
   pthread_rwlock_wrlock(&(H->lock));
 
+  if (H->numLaunched == 0) {
+    pthread_rwlock_unlock(&(H->lock));
+    return;
+  }
+
   WorkloadPacket* newPackets = malloc((H->numLaunched-1) * sizeof(WorkloadPacket));
 
   for (int i = 0; i < H->numLaunched; i++) {
@@ -575,7 +578,6 @@ void unregisterDevice (HardwareDevice H, pthread_t sendNodeWorker) {
     WorkloadPacket e = H->launchedPackets[i];
     while (1) {
       int rv = queueEnqueue(inQ, (void*)e);
-      printf("Putting back in %s, %s\n", e->executablePath, e->dataPath);
       if (rv == 0) {
         break;
       }
@@ -608,11 +610,32 @@ void unregisterDevice (HardwareDevice H, pthread_t sendNodeWorker) {
 
 void writeResultFile (char* textName, char* textData, int textDataSize, int jobID, int exeID) {
 
-  // int to string
-  char* num = malloc(30);
-  //itoa(currentPacket, num, 10);
+  char* prefix = "../Database/";
+  char* backslash = "/";
 
+  char* jobNum = malloc(BUFSIZE);
+  itoa(jobID, jobNum, 10);
+  strcat(jobNum, backslash);
 
+  char* exeNum = malloc(BUFSIZE);
+  itoa((exeID+1), exeNum, 10);
+  strcat(exeNum, backslash);
+
+  char* fullname = malloc(strlen(textName)+strlen(jobNum)+strlen(exeNum)+strlen(prefix)+1);
+  strcpy(fullname, prefix);
+  strcat(fullname, jobNum);
+  strcat(fullname, exeNum);
+  strcat(fullname, textName);
+
+  int fd = open(fullname, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
+  write(fd, textData, textDataSize);
+  close(fd);
+
+  printf("RN: Wrote result file to Database/%d/%d\n", jobID, exeID+1);
+
+  free(jobNum);
+  free(exeNum);
+  free(fullname);
 
 }
 
@@ -666,7 +689,7 @@ void receiveFromHardwareDevice (void* threadArgs) {
     switch (functionality) {
       // Receive a result file
       case (RESULT_FILE):
-        printf("RN: Receiving result file\n");
+        printf("RN: Receiving result file\n", bufSize);
         buf = malloc(bufSize);
         rv = recv(sockfd, buf, bufSize, MSG_WAITALL);
         if (rv == -1) {
@@ -681,7 +704,7 @@ void receiveFromHardwareDevice (void* threadArgs) {
         memcpy(&textNameSize, buf+2*sizeof(int), sizeof(int));
         textName = malloc(textNameSize + 1);
         memcpy(textName, buf+3*sizeof(int), textNameSize);
-        memcpy(textName+textNameSize, '\0', sizeof(char));
+        textName[textNameSize] = '\0';
         memcpy(&textDataSize, buf+3*sizeof(int)+textNameSize, sizeof(int));
         textData = malloc(textDataSize);
         memcpy(textData, buf+4*sizeof(int)+textNameSize, textDataSize);
@@ -715,7 +738,8 @@ void receiveFromHardwareDevice (void* threadArgs) {
         memcpy(&capUtilization, buf+2*sizeof(int), sizeof(int));
         memcpy(&capMemoryUsage, buf+3*sizeof(int), sizeof(int));
 
-        if (utilization == 0 || memoryUsage == 0 || capUtilization == 0 || capMemoryUsage == 0) {
+        if (utilization < 1 || memoryUsage < 1 || capUtilization < 1 || capMemoryUsage < 1 ||
+            utilization > 99 || memoryUsage > 99 || capUtilization > 99 || capMemoryUsage > 99) {
           unregisterDevice(H, sendNodeWorker);
           free(buf);
           printf("RN: Receiving erroneous hardware stats, terminating device\n");

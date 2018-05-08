@@ -20,6 +20,8 @@
 #define UNREGISTER 2
 
 #define MAX_QUEUE_SIZE 10000
+#define BUFSIZE 80
+
 #define MAP 0
 #define RECOMBINE 1
 

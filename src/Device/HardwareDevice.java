@@ -39,8 +39,11 @@ public class HardwareDevice implements Runnable {
     System.out.println("Inside of thead");
 
     double time = currentTime();
+    double passed = 0.0;
     int i = 0;
     while (true) {
+
+      double snapshot = currentTime();
 
       if (currentTime() - time >= 3.0) {
         try {
@@ -58,6 +61,35 @@ public class HardwareDevice implements Runnable {
           System.out.println("Failed to send stats");
         }
       }
+
+      else if (passed >= 10.0) {
+        try {
+          String fname = "./array0.txt";
+          String name = "array0.txt";
+          File fText = new File(fname);
+          FileInputStream f = new FileInputStream(fname);
+          byte[] data = new byte[(int)fText.length()];
+          f.read(data);
+
+          outStream.write(bufferInt(0));
+          outStream.write(bufferInt(16+(int)fText.length()+name.length()));
+          outStream.write(bufferInt(5));
+          outStream.write(bufferInt(5));
+          outStream.write(bufferInt(name.length()));
+          outStream.write(name.getBytes());
+          outStream.write(bufferInt((int)fText.length()));
+          outStream.write(data);
+          outStream.flush();
+
+          System.out.println("Sent result file to server");
+          passed = 0.0;
+        }
+        catch (Exception e) {
+          System.out.println("Unable to send result file to server");
+        }
+      }
+
+      passed += currentTime() - snapshot;
 
     }
 
