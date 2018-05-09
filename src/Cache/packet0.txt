@@ -1,6 +1,6 @@
 5
 5
-../TestCases/Map
-../TestCases/
+../TestCases/map.out
+../TestCases/array0.txt
 1
-1
+0

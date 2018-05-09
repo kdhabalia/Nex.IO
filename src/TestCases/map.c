@@ -36,12 +36,13 @@ int main() {
 
   fclose(fp);
 
-  fp = fopen("result.txt", "w");
+  fp = fopen("/sdcard/result.txt", "w");
 
   for (int i = 0; i < size; i++) {
     fprintf(fp, "%d\n", array[i]);
   }
 
+  fflush(fp);
   fclose(fp);
 
   return 0;
