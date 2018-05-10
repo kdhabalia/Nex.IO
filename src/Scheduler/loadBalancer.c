@@ -745,8 +745,8 @@ void receiveFromHardwareDevice (void* threadArgs) {
         memcpy(&capUtilization, buf+2*sizeof(int), sizeof(int));
         memcpy(&capMemoryUsage, buf+3*sizeof(int), sizeof(int));
 
-        if (utilization < 1 || memoryUsage < 1 || capUtilization < 1 || capMemoryUsage < 1 ||
-            utilization > 99 || memoryUsage > 99 || capUtilization > 99 || capMemoryUsage > 99) {
+        if (utilization < 0 || memoryUsage < 0 || capUtilization < 0 || capMemoryUsage < 0 ||
+            utilization > 100 || memoryUsage > 100 || capUtilization > 100 || capMemoryUsage > 100) {
           unregisterDevice(H, sendNodeWorker);
           free(buf);
           printf("RN: Receiving erroneous hardware stats, terminating device\n");
