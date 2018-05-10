@@ -527,6 +527,7 @@ void removeLaunchedData (HardwareDevice H, int jobID, int exeID) {
 
   WorkloadPacket* newPackets = malloc((H->numLaunched-1) * sizeof(WorkloadPacket));
 
+  int p = 0;
   for (int i = 0; i < H->numLaunched; i++) {
     WorkloadPacket e = H->launchedPackets[i];
 
@@ -536,7 +537,8 @@ void removeLaunchedData (HardwareDevice H, int jobID, int exeID) {
       free(e);
     }
     else {
-      newPackets[i] = e;
+      newPackets[p] = e;
+      p++;
     }
   }
 
@@ -587,13 +589,15 @@ void unregisterDevice (HardwareDevice H, pthread_t sendNodeWorker) {
   free(H->launchedPackets);
 
   HardwareDevice* newDevices = malloc((registeredDevices-1)*sizeof(HardwareDevice));
+  int p = 0;
   for (int i = 0; i < registeredDevices; i++) {
     HardwareDevice current = devices[i];
     if (current->ID == H->ID) {
       continue;
     }
     else {
-      newDevices[i] = current;
+      newDevices[p] = current;
+      p++;
     }
   }
 
@@ -683,6 +687,9 @@ void receiveFromHardwareDevice (void* threadArgs) {
     // Unmarshal the first two ints
     memcpy(&functionality, initialReceive, sizeof(int));
     memcpy(&bufSize, initialReceive+sizeof(int), sizeof(int));
+    if (bufSize <= 0) {
+      printf("RN: Received bad buf size of %d\n", bufSize);
+    }
 
     printf("RN: Received data from device with functionality: %d\n", functionality);
 
