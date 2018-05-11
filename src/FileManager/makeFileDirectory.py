@@ -37,7 +37,7 @@ def makeDatabaseEntry(nameOfFile):
     if textFile in textArray:
       shutil.move(directoryToCheck+nameOfFile+"/"+textFile, pathToMake+"/"+"0/")
 
-  for i in xrange(len(exeArray)):
+  for i in xrange(len(exeArray)+1):
     shutil.move(directoryToCheck+nameOfFile+"/"+str(exeArray[i]), pathToMake+"/"+str(i)+"/")
   os.remove(directoryToCheck+nameOfFile+".tar")
   shutil.rmtree(directoryToCheck+nameOfFile)

@@ -15,7 +15,7 @@ def populateDictionary():
         for execs in os.listdir(baseDirectory + folders):
           for txtFiles in os.listdir(baseDirectory + folders + "/" + execs):
             if(txtFiles.lower().endswith(".txt")):
-              (databaseDictionary[folders])[txtFiles] = [execs, 0]
+              (databaseDictionary[folders])[txtFiles] = [execs, 0, len(execs)]
 
 def putTasksInQueue(granularity):
   global databaseDictionary
@@ -42,12 +42,13 @@ def setToRun(startVal, tillVal, databaseDictionary):
   while(j < tillVal):
     jobDict = databaseDictionary[str(j)]
     for i in jobDict.keys():
-      if((jobDict[i][1]) == 0):
+      if((jobDict[i][1]) == 0 and jobDict[i][0] != jobDict[i][2]):
         jobDict[i][1] = 1
         tempPath = baseDirectory+str(i)+"/"
         with open(cacheDirectory+"packet"+str(packetCounter)+".txt", "w+") as myfile:
           packetCounter += 1
           execVal = str(jobDict[i][0])
+          if(
           myfile.write(str(j)+"\n"+execVal+"\n"+tempPath+execVal+"\n"+tempPath+execVal+"/"+i+"\n"+str(1)+"\n"+str(0))
     j+=1
 
