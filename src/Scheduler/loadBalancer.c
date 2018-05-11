@@ -3,6 +3,7 @@
 Queue inQ;
 
 int registeredDevices = 0;
+int currentHID = 0;
 HardwareDevice* devices;
 pthread_mutex_t mLock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -69,7 +70,7 @@ HardwareDevice registerDevice (float capUtilization, float capMemoryUsage, float
 
   HardwareDevice new = malloc(sizeof(struct Device));
   pthread_rwlock_init(&(new->lock), NULL);
-  new->ID = registeredDevices;
+  new->ID = currentHID;
   new->Q = queueInit(MAX_QUEUE_SIZE);
   new->numLaunched = 0;
   new->launchedPackets = NULL;
@@ -79,6 +80,7 @@ HardwareDevice registerDevice (float capUtilization, float capMemoryUsage, float
   new->capUtilization = capUtilization;
 
   registeredDevices++;
+  currentHID++;
   newDevices[registeredDevices-1] = new;
   free(devices);
   devices = newDevices;
