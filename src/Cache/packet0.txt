@@ -1,6 +1,6 @@
-5
-5
-../TestCases/karan
-../TestCases/array0.txt
+0
+0
+../Database/array0.txt/0
+../Database/array0.txt/0/array0.txt
 1
 0

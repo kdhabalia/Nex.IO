@@ -48,7 +48,6 @@ def setToRun(startVal, tillVal, databaseDictionary):
         with open(cacheDirectory+"packet"+str(packetCounter)+".txt", "w+") as myfile:
           packetCounter += 1
           execVal = str(jobDict[i][0])
-          if(
           myfile.write(str(j)+"\n"+execVal+"\n"+tempPath+execVal+"\n"+tempPath+execVal+"/"+i+"\n"+str(1)+"\n"+str(0))
     j+=1
 

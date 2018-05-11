@@ -1,6 +1,6 @@
-6
-6
-../TestCases/mario
-../TestCases/array0.txt
+0
+0
+../Database/array1.txt/0
+../Database/array1.txt/0/array1.txt
 1
 0
